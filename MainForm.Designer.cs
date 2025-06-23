@@ -1,4 +1,4 @@
-﻿namespace MedicalTextConverter
+﻿namespace MediRecordConverter
 {
     partial class MainForm
     {

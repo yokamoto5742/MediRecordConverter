@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace MedicalTextConverter
+namespace MediRecordConverter
 {
     public class TextEditorForm : Form
     {

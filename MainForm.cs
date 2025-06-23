@@ -1,13 +1,14 @@
-﻿using System;
+﻿using MediRecordConverter;
+using Newtonsoft.Json;
+using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using Newtonsoft.Json;
 
-namespace MedicalTextConverter
+namespace MediRecordConverter  // MedicalTextConverter から変更
 {
     public partial class MainForm : Form
     {
@@ -32,6 +33,7 @@ namespace MedicalTextConverter
             UpdateStats();
         }
 
+        // 以下は既存のコードと同じ
         private void InitializeCustomComponents()
         {
             // フォームの基本設定
