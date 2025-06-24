@@ -35,6 +35,10 @@ namespace MediRecordConverter
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string summary { get; set; }
 
+            // 修正：現在処理中のSOAPセクションを追跡
+            [JsonIgnore]
+            public string currentSoapSection { get; set; } = "";
+
             // 空の文字列プロパティを除外するためのメソッド
             public bool ShouldSerializesubject()
             {
@@ -123,7 +127,8 @@ namespace MediRecordConverter
                             assessment = "",
                             plan = "",
                             comment = "",
-                            summary = ""
+                            summary = "",
+                            currentSoapSection = "" // 修正：SOAPセクション追跡を初期化
                         };
                         continue;
                     }
@@ -294,13 +299,13 @@ namespace MediRecordConverter
         }
 
         /// <summary>
-        /// SOAPコンテンツを分類
+        /// SOAPコンテンツを分類（修正版）
         /// </summary>
         private void ClassifySOAPContent(string line, MedicalRecord record)
         {
             var trimmedLine = line.Trim();
 
-            // SOAPマッピング
+            // 修正：SOAPマッピング
             var soapMapping = new Dictionary<string, string>
             {
                 { "S", "subject" },
@@ -311,7 +316,8 @@ namespace MediRecordConverter
                 { "サ", "summary" }
             };
 
-            // SOAP項目の検出と分類
+            // 修正：SOAP項目の検出と分類を改善
+            bool foundSoapPattern = false;
             foreach (var mapping in soapMapping)
             {
                 var patterns = new string[]
@@ -319,13 +325,19 @@ namespace MediRecordConverter
                     $"{mapping.Key} >",
                     $"{mapping.Key}>",
                     $"{mapping.Key} ＞",
-                    $"{mapping.Key}＞"
+                    $"{mapping.Key}＞",
+                    $"{mapping.Key} ",
+                    $"{mapping.Key}　"
                 };
 
                 foreach (var pattern in patterns)
                 {
-                    if (trimmedLine.StartsWith(pattern) || trimmedLine.Equals(pattern.TrimEnd()))
+                    if (trimmedLine.StartsWith(pattern))
                     {
+                        // 修正：現在のSOAPセクションを更新
+                        record.currentSoapSection = mapping.Value;
+                        foundSoapPattern = true;
+
                         var content = "";
                         if (trimmedLine.Length > pattern.Length)
                         {
@@ -341,10 +353,10 @@ namespace MediRecordConverter
                 }
             }
 
-            // 継続行の処理（SOAPパターンでない場合）
-            if (!string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
+            // 修正：継続行の処理を改善
+            if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
             {
-                // 最後に更新されたフィールドに継続行を追加
+                // 現在のSOAPセクションに継続行を追加
                 AddContinuationLine(record, trimmedLine);
             }
         }
@@ -378,41 +390,98 @@ namespace MediRecordConverter
         }
 
         /// <summary>
-        /// 継続行を最適なフィールドに追加
+        /// 継続行を現在のSOAPセクションに追加（修正版）
         /// </summary>
         private void AddContinuationLine(MedicalRecord record, string content)
         {
-            // 最後に更新されたフィールドを特定し、そこに追加
-            // 優先順位: comment -> plan -> assessment -> objectData -> subject -> summary
-            if (!string.IsNullOrEmpty(record.comment))
+            // 修正：現在のSOAPセクションに基づいて追加
+            switch (record.currentSoapSection)
             {
-                record.comment = AppendContent(record.comment, content);
+                case "subject":
+                    record.subject = AppendContent(record.subject, content);
+                    break;
+                case "object":
+                    record.objectData = AppendContent(record.objectData, content);
+                    break;
+                case "assessment":
+                    record.assessment = AppendContent(record.assessment, content);
+                    break;
+                case "plan":
+                    record.plan = AppendContent(record.plan, content);
+                    break;
+                case "comment":
+                    record.comment = AppendContent(record.comment, content);
+                    break;
+                case "summary":
+                    record.summary = AppendContent(record.summary, content);
+                    break;
+                default:
+                    // 修正：SOAPセクションが特定されていない場合は、内容に応じてインテリジェントに分類
+                    if (IsObjectiveContent(content))
+                    {
+                        record.objectData = AppendContent(record.objectData, content);
+                        record.currentSoapSection = "object";
+                    }
+                    else if (IsAssessmentContent(content))
+                    {
+                        record.assessment = AppendContent(record.assessment, content);
+                        record.currentSoapSection = "assessment";
+                    }
+                    else if (IsPlanContent(content))
+                    {
+                        record.plan = AppendContent(record.plan, content);
+                        record.currentSoapSection = "plan";
+                    }
+                    else
+                    {
+                        // デフォルトでsubjectに追加
+                        record.subject = AppendContent(record.subject, content);
+                        record.currentSoapSection = "subject";
+                    }
+                    break;
             }
-            else if (!string.IsNullOrEmpty(record.plan))
+        }
+
+        /// <summary>
+        /// 修正：客観的所見内容かどうかを判定
+        /// </summary>
+        private bool IsObjectiveContent(string content)
+        {
+            var objectiveKeywords = new string[]
             {
-                record.plan = AppendContent(record.plan, content);
-            }
-            else if (!string.IsNullOrEmpty(record.assessment))
+                "他覚所見", "透析記録", "尿量", "血圧", "体温", "脈拍", "呼吸", "血液検査",
+                "検査結果", "画像", "所見", "観察", "測定", "経口摂取", "血糖値"
+            };
+
+            return objectiveKeywords.Any(keyword => content.Contains(keyword));
+        }
+
+        /// <summary>
+        /// 修正：評価内容かどうかを判定
+        /// </summary>
+        private bool IsAssessmentContent(string content)
+        {
+            var assessmentKeywords = new string[]
             {
-                record.assessment = AppendContent(record.assessment, content);
-            }
-            else if (!string.IsNullOrEmpty(record.objectData))
+                "＃", "#", "診断", "評価", "慢性", "症", "病", "疾患", "状態", "不全",
+                "糖尿病", "高血圧", "腎症", "心不全", "切断", "貧血"
+            };
+
+            return assessmentKeywords.Any(keyword => content.Contains(keyword));
+        }
+
+        /// <summary>
+        /// 修正：計画内容かどうかを判定
+        /// </summary>
+        private bool IsPlanContent(string content)
+        {
+            var planKeywords = new string[]
             {
-                record.objectData = AppendContent(record.objectData, content);
-            }
-            else if (!string.IsNullOrEmpty(record.subject))
-            {
-                record.subject = AppendContent(record.subject, content);
-            }
-            else if (!string.IsNullOrEmpty(record.summary))
-            {
-                record.summary = AppendContent(record.summary, content);
-            }
-            else
-            {
-                // デフォルトでsubjectに追加
-                record.subject = AppendContent(record.subject, content);
-            }
+                "透析", "治療", "処方", "継続", "指導", "制限", "予定", "検討", "再開",
+                "維持", "採血", "注射", "薬", "インスリン", "フロセミド", "mg", "錠", "単位"
+            };
+
+            return planKeywords.Any(keyword => content.Contains(keyword));
         }
 
         /// <summary>
@@ -471,4 +540,4 @@ namespace MediRecordConverter
             return cleanedRecords;
         }
     }
-}c
+}
