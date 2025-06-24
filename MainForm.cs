@@ -8,7 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace MediRecordConverter  // MedicalTextConverter から変更
+namespace MediRecordConverter
 {
     public partial class MainForm : Form
     {
