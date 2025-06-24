@@ -69,7 +69,12 @@ namespace MediRecordConverter
                         currentRecord = new MedicalRecord
                         {
                             timestamp = CombineDateAndTime(currentDate, recordMatch.Value.Time),
-                            department = recordMatch.Value.Department
+                            department = recordMatch.Value.Department,
+                            subject = "",
+                            objectData = "",
+                            assessment = "",
+                            plan = "",
+                            comment = ""
                         };
                         continue;
                     }
@@ -90,9 +95,10 @@ namespace MediRecordConverter
                 // 空のフィールドを持つレコードをクリーンアップ
                 records = CleanupRecords(records);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // エラーは無視してこれまでの結果を返す
+                // デバッグ用：エラーログを出力
+                System.Diagnostics.Debug.WriteLine($"ParseMedicalText Error: {ex.Message}");
             }
 
             return records;
@@ -103,7 +109,7 @@ namespace MediRecordConverter
         /// </summary>
         private string ExtractDate(string line)
         {
-            // パターン: 2025/04/18(金)　（入院 71 日目）
+            // 修正: より柔軟な日付パターンに変更
             var datePattern = @"(\d{4}/\d{1,2}/\d{1,2})";
             var match = Regex.Match(line, datePattern);
             if (match.Success)
@@ -131,9 +137,8 @@ namespace MediRecordConverter
         /// </summary>
         private (string Department, string Time)? ExtractDoctorRecord(string line)
         {
-            // パターン: 内科　　波部　孝弘　　国保　　12:41
-            // 全角スペースと半角スペースの両方に対応
-            var pattern = @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?(\d{1,2}:\d{1,2})";
+            // 修正: より柔軟な正規表現パターンに変更
+            var pattern = @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?(\d{1,2}:\d{2})";
             var match = Regex.Match(line, pattern);
 
             if (match.Success)
@@ -173,51 +178,96 @@ namespace MediRecordConverter
         {
             var trimmedLine = line.Trim();
 
-            if (trimmedLine.StartsWith("S >") || trimmedLine.StartsWith("S>"))
+            // 修正: SOAPパターンの検出を改善
+            if (trimmedLine.StartsWith("S >") || trimmedLine.StartsWith("S>") || trimmedLine.Equals("S >"))
             {
-                var content = trimmedLine.StartsWith("S >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                record.subject = AppendContent(record.subject, content);
+                if (trimmedLine.Length > 3)
+                {
+                    var content = trimmedLine.StartsWith("S >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        record.subject = AppendContent(record.subject, content);
+                    }
+                }
+                // 次の行もチェック（SOAPヘッダーの後に内容が続く場合）
+                return;
             }
-            else if (trimmedLine.StartsWith("O >") || trimmedLine.StartsWith("O>"))
+            else if (trimmedLine.StartsWith("O >") || trimmedLine.StartsWith("O>") || trimmedLine.Equals("O >"))
             {
-                var content = trimmedLine.StartsWith("O >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                record.objectData = AppendContent(record.objectData, content);
+                if (trimmedLine.Length > 3)
+                {
+                    var content = trimmedLine.StartsWith("O >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        record.objectData = AppendContent(record.objectData, content);
+                    }
+                }
+                return;
             }
-            else if (trimmedLine.StartsWith("A >") || trimmedLine.StartsWith("A>"))
+            else if (trimmedLine.StartsWith("A >") || trimmedLine.StartsWith("A>") || trimmedLine.Equals("A >"))
             {
-                var content = trimmedLine.StartsWith("A >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                record.assessment = AppendContent(record.assessment, content);
+                if (trimmedLine.Length > 3)
+                {
+                    var content = trimmedLine.StartsWith("A >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        record.assessment = AppendContent(record.assessment, content);
+                    }
+                }
+                return;
             }
-            else if (trimmedLine.StartsWith("P >") || trimmedLine.StartsWith("P>"))
+            else if (trimmedLine.StartsWith("P >") || trimmedLine.StartsWith("P>") || trimmedLine.Equals("P >"))
             {
-                var content = trimmedLine.StartsWith("P >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                record.plan = AppendContent(record.plan, content);
+                if (trimmedLine.Length > 3)
+                {
+                    var content = trimmedLine.StartsWith("P >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        record.plan = AppendContent(record.plan, content);
+                    }
+                }
+                return;
             }
-            else if (trimmedLine.StartsWith("F >") || trimmedLine.StartsWith("F>"))
+            else if (trimmedLine.StartsWith("F >") || trimmedLine.StartsWith("F>") || trimmedLine.Equals("F >"))
             {
-                var content = trimmedLine.StartsWith("F >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                record.comment = AppendContent(record.comment, content);
+                if (trimmedLine.Length > 3)
+                {
+                    var content = trimmedLine.StartsWith("F >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        record.comment = AppendContent(record.comment, content);
+                    }
+                }
+                return;
             }
-            else if (!string.IsNullOrWhiteSpace(trimmedLine) &&
-                     !trimmedLine.Contains("　　") &&
-                     !trimmedLine.Contains("  ") &&
-                     !IsHeaderLine(trimmedLine))
+
+            // 修正: 継続行の処理を改善
+            if (!string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
             {
-                // 継続行として前のフィールドに追加
-                if (!string.IsNullOrEmpty(record.plan))
+                // 現在のコンテキストに基づいて適切なフィールドに追加
+                if (record.comment != null && record.comment.Length > 0)
+                {
+                    record.comment = AppendContent(record.comment, trimmedLine);
+                }
+                else if (record.plan != null && record.plan.Length > 0)
                 {
                     record.plan = AppendContent(record.plan, trimmedLine);
                 }
-                else if (!string.IsNullOrEmpty(record.assessment))
+                else if (record.assessment != null && record.assessment.Length > 0)
                 {
                     record.assessment = AppendContent(record.assessment, trimmedLine);
                 }
-                else if (!string.IsNullOrEmpty(record.objectData))
+                else if (record.objectData != null && record.objectData.Length > 0)
                 {
                     record.objectData = AppendContent(record.objectData, trimmedLine);
                 }
-                else if (!string.IsNullOrEmpty(record.subject))
+                else if (record.subject != null && record.subject.Length > 0)
                 {
+                    record.subject = AppendContent(record.subject, trimmedLine);
+                }
+                else
+                {
+                    // デフォルトでsubjectに追加
                     record.subject = AppendContent(record.subject, trimmedLine);
                 }
             }
@@ -256,13 +306,8 @@ namespace MediRecordConverter
 
             foreach (var record in records)
             {
-                // すべてのフィールドが空でないレコードのみを保持
-                if (!string.IsNullOrEmpty(record.timestamp) &&
-                    (!string.IsNullOrEmpty(record.subject) ||
-                     !string.IsNullOrEmpty(record.objectData) ||
-                     !string.IsNullOrEmpty(record.assessment) ||
-                     !string.IsNullOrEmpty(record.plan) ||
-                     !string.IsNullOrEmpty(record.comment)))
+                // 修正: タイムスタンプと部署名があれば有効なレコードとして扱う
+                if (!string.IsNullOrEmpty(record.timestamp) && !string.IsNullOrEmpty(record.department))
                 {
                     // nullフィールドを空文字に変換
                     var cleanRecord = new MedicalRecord
@@ -276,7 +321,6 @@ namespace MediRecordConverter
                         comment = record.comment ?? ""
                     };
 
-                    // 空の文字列フィールドは含めない（JSONサイズ削減）
                     cleanedRecords.Add(cleanRecord);
                 }
             }
