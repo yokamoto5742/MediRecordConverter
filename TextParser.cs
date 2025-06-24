@@ -20,7 +20,7 @@ namespace MediRecordConverter
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string subject { get; set; }
 
-            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+            [JsonProperty("object", NullValueHandling = NullValueHandling.Ignore)]
             public string objectData { get; set; }
 
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -31,6 +31,9 @@ namespace MediRecordConverter
 
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string comment { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+            public string summary { get; set; }
 
             // 空の文字列プロパティを除外するためのメソッド
             public bool ShouldSerializesubject()
@@ -56,6 +59,11 @@ namespace MediRecordConverter
             public bool ShouldSerializecomment()
             {
                 return !string.IsNullOrEmpty(comment);
+            }
+
+            public bool ShouldSerializesummary()
+            {
+                return !string.IsNullOrEmpty(summary);
             }
         }
 
@@ -114,7 +122,8 @@ namespace MediRecordConverter
                             objectData = "",
                             assessment = "",
                             plan = "",
-                            comment = ""
+                            comment = "",
+                            summary = ""
                         };
                         continue;
                     }
@@ -135,6 +144,9 @@ namespace MediRecordConverter
                 // 空のフィールドを持つレコードをクリーンアップ
                 records = CleanupRecords(records);
 
+                // 同じ時刻のレコードをマージ
+                records = MergeRecordsByTimestamp(records);
+
                 // 日付時刻順にソート（古い順）
                 records = SortRecordsByDateTime(records);
             }
@@ -145,6 +157,58 @@ namespace MediRecordConverter
             }
 
             return records;
+        }
+
+        /// <summary>
+        /// 同じ時刻とdepartmentのレコードをマージ
+        /// </summary>
+        private List<MedicalRecord> MergeRecordsByTimestamp(List<MedicalRecord> records)
+        {
+            var mergedRecords = new List<MedicalRecord>();
+            var groupedRecords = records.GroupBy(r => new { r.timestamp, r.department });
+
+            foreach (var group in groupedRecords)
+            {
+                if (group.Count() == 1)
+                {
+                    mergedRecords.Add(group.First());
+                }
+                else
+                {
+                    // 複数のレコードを統合
+                    var mergedRecord = new MedicalRecord
+                    {
+                        timestamp = group.Key.timestamp,
+                        department = group.Key.department,
+                        subject = "",
+                        objectData = "",
+                        assessment = "",
+                        plan = "",
+                        comment = "",
+                        summary = ""
+                    };
+
+                    foreach (var record in group)
+                    {
+                        if (!string.IsNullOrEmpty(record.subject))
+                            mergedRecord.subject = AppendContent(mergedRecord.subject, record.subject);
+                        if (!string.IsNullOrEmpty(record.objectData))
+                            mergedRecord.objectData = AppendContent(mergedRecord.objectData, record.objectData);
+                        if (!string.IsNullOrEmpty(record.assessment))
+                            mergedRecord.assessment = AppendContent(mergedRecord.assessment, record.assessment);
+                        if (!string.IsNullOrEmpty(record.plan))
+                            mergedRecord.plan = AppendContent(mergedRecord.plan, record.plan);
+                        if (!string.IsNullOrEmpty(record.comment))
+                            mergedRecord.comment = AppendContent(mergedRecord.comment, record.comment);
+                        if (!string.IsNullOrEmpty(record.summary))
+                            mergedRecord.summary = AppendContent(mergedRecord.summary, record.summary);
+                    }
+
+                    mergedRecords.Add(mergedRecord);
+                }
+            }
+
+            return mergedRecords;
         }
 
         /// <summary>
@@ -236,98 +300,118 @@ namespace MediRecordConverter
         {
             var trimmedLine = line.Trim();
 
-            // 修正: SOAPパターンの検出を改善
-            if (trimmedLine.StartsWith("S >") || trimmedLine.StartsWith("S>") || trimmedLine.Equals("S >"))
+            // SOAPマッピング
+            var soapMapping = new Dictionary<string, string>
             {
-                if (trimmedLine.Length > 3)
+                { "S", "subject" },
+                { "O", "object" },
+                { "A", "assessment" },
+                { "P", "plan" },
+                { "F", "comment" },
+                { "サ", "summary" }
+            };
+
+            // SOAP項目の検出と分類
+            foreach (var mapping in soapMapping)
+            {
+                var patterns = new string[]
                 {
-                    var content = trimmedLine.StartsWith("S >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                    if (!string.IsNullOrEmpty(content))
+                    $"{mapping.Key} >",
+                    $"{mapping.Key}>",
+                    $"{mapping.Key} ＞",
+                    $"{mapping.Key}＞"
+                };
+
+                foreach (var pattern in patterns)
+                {
+                    if (trimmedLine.StartsWith(pattern) || trimmedLine.Equals(pattern.TrimEnd()))
                     {
-                        record.subject = AppendContent(record.subject, content);
+                        var content = "";
+                        if (trimmedLine.Length > pattern.Length)
+                        {
+                            content = trimmedLine.Substring(pattern.Length).Trim();
+                        }
+
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            SetFieldByMapping(record, mapping.Value, content);
+                        }
+                        return;
                     }
                 }
-                // 次の行もチェック（SOAPヘッダーの後に内容が続く場合）
-                return;
-            }
-            else if (trimmedLine.StartsWith("O >") || trimmedLine.StartsWith("O>") || trimmedLine.Equals("O >"))
-            {
-                if (trimmedLine.Length > 3)
-                {
-                    var content = trimmedLine.StartsWith("O >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        record.objectData = AppendContent(record.objectData, content);
-                    }
-                }
-                return;
-            }
-            else if (trimmedLine.StartsWith("A >") || trimmedLine.StartsWith("A>") || trimmedLine.Equals("A >"))
-            {
-                if (trimmedLine.Length > 3)
-                {
-                    var content = trimmedLine.StartsWith("A >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        record.assessment = AppendContent(record.assessment, content);
-                    }
-                }
-                return;
-            }
-            else if (trimmedLine.StartsWith("P >") || trimmedLine.StartsWith("P>") || trimmedLine.Equals("P >"))
-            {
-                if (trimmedLine.Length > 3)
-                {
-                    var content = trimmedLine.StartsWith("P >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        record.plan = AppendContent(record.plan, content);
-                    }
-                }
-                return;
-            }
-            else if (trimmedLine.StartsWith("F >") || trimmedLine.StartsWith("F>") || trimmedLine.Equals("F >"))
-            {
-                if (trimmedLine.Length > 3)
-                {
-                    var content = trimmedLine.StartsWith("F >") ? trimmedLine.Substring(3).Trim() : trimmedLine.Substring(2).Trim();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        record.comment = AppendContent(record.comment, content);
-                    }
-                }
-                return;
             }
 
-            // 修正: 継続行の処理を改善
+            // 継続行の処理（SOAPパターンでない場合）
             if (!string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
             {
-                // 現在のコンテキストに基づいて適切なフィールドに追加
-                if (record.comment != null && record.comment.Length > 0)
-                {
-                    record.comment = AppendContent(record.comment, trimmedLine);
-                }
-                else if (record.plan != null && record.plan.Length > 0)
-                {
-                    record.plan = AppendContent(record.plan, trimmedLine);
-                }
-                else if (record.assessment != null && record.assessment.Length > 0)
-                {
-                    record.assessment = AppendContent(record.assessment, trimmedLine);
-                }
-                else if (record.objectData != null && record.objectData.Length > 0)
-                {
-                    record.objectData = AppendContent(record.objectData, trimmedLine);
-                }
-                else if (record.subject != null && record.subject.Length > 0)
-                {
-                    record.subject = AppendContent(record.subject, trimmedLine);
-                }
-                else
-                {
-                    // デフォルトでsubjectに追加
-                    record.subject = AppendContent(record.subject, trimmedLine);
-                }
+                // 最後に更新されたフィールドに継続行を追加
+                AddContinuationLine(record, trimmedLine);
+            }
+        }
+
+        /// <summary>
+        /// マッピングに基づいてフィールドを設定
+        /// </summary>
+        private void SetFieldByMapping(MedicalRecord record, string fieldName, string content)
+        {
+            switch (fieldName)
+            {
+                case "subject":
+                    record.subject = AppendContent(record.subject, content);
+                    break;
+                case "object":
+                    record.objectData = AppendContent(record.objectData, content);
+                    break;
+                case "assessment":
+                    record.assessment = AppendContent(record.assessment, content);
+                    break;
+                case "plan":
+                    record.plan = AppendContent(record.plan, content);
+                    break;
+                case "comment":
+                    record.comment = AppendContent(record.comment, content);
+                    break;
+                case "summary":
+                    record.summary = AppendContent(record.summary, content);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 継続行を最適なフィールドに追加
+        /// </summary>
+        private void AddContinuationLine(MedicalRecord record, string content)
+        {
+            // 最後に更新されたフィールドを特定し、そこに追加
+            // 優先順位: comment -> plan -> assessment -> objectData -> subject -> summary
+            if (!string.IsNullOrEmpty(record.comment))
+            {
+                record.comment = AppendContent(record.comment, content);
+            }
+            else if (!string.IsNullOrEmpty(record.plan))
+            {
+                record.plan = AppendContent(record.plan, content);
+            }
+            else if (!string.IsNullOrEmpty(record.assessment))
+            {
+                record.assessment = AppendContent(record.assessment, content);
+            }
+            else if (!string.IsNullOrEmpty(record.objectData))
+            {
+                record.objectData = AppendContent(record.objectData, content);
+            }
+            else if (!string.IsNullOrEmpty(record.subject))
+            {
+                record.subject = AppendContent(record.subject, content);
+            }
+            else if (!string.IsNullOrEmpty(record.summary))
+            {
+                record.summary = AppendContent(record.summary, content);
+            }
+            else
+            {
+                // デフォルトでsubjectに追加
+                record.subject = AppendContent(record.subject, content);
             }
         }
 
@@ -376,7 +460,8 @@ namespace MediRecordConverter
                         objectData = string.IsNullOrEmpty(record.objectData) ? null : record.objectData,
                         assessment = string.IsNullOrEmpty(record.assessment) ? null : record.assessment,
                         plan = string.IsNullOrEmpty(record.plan) ? null : record.plan,
-                        comment = string.IsNullOrEmpty(record.comment) ? null : record.comment
+                        comment = string.IsNullOrEmpty(record.comment) ? null : record.comment,
+                        summary = string.IsNullOrEmpty(record.summary) ? null : record.summary
                     };
 
                     cleanedRecords.Add(cleanRecord);
@@ -386,4 +471,4 @@ namespace MediRecordConverter
             return cleanedRecords;
         }
     }
-}
+}c
