@@ -15,8 +15,8 @@ namespace MediRecordConverter
         public string EditorWindowPosition { get; private set; } = "+10+10";
         public int ButtonWidth { get; private set; } = 120;
         public int ButtonHeight { get; private set; } = 40;
-        public string OperationFilePath { get; private set; } = @"C:\Shinseikai\TXT2JSON\mouseoperation.exe";
-        public string SoapCopyFilePath { get; private set; } = @"C:\Shinseikai\TXT2JSON\soapcopy.exe";
+        public string OperationFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\mouseoperation.exe";
+        public string SoapCopyFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\soapcopy.exe";
 
         public ConfigManager()
         {
