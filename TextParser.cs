@@ -7,37 +7,16 @@ namespace MediRecordConverter
 {
     public class TextParser
     {
-        // 解析統計用のクラス
-        public class ParsingStatistics
-        {
-            public int TotalLines { get; set; }
-            public int ProcessedLines { get; set; }
-            public int EmptyLines { get; set; }
-            public int DateTimeEntries { get; set; }
-            public int DuplicateRecords { get; set; }
-            public int ValidRecords { get; set; }
-            public DateTime ProcessingTime { get; set; }
-            public List<string> Errors { get; set; } = new List<string>();
-            public List<string> Warnings { get; set; } = new List<string>();
-        }
-
-        // 医療記録用のクラス
+        // 医療記録用のクラス（簡素化）
         public class MedicalRecord
         {
-            public string Id { get; set; }
-            public DateTime? DateTime { get; set; }
-            public string Content { get; set; }
-            public string Type { get; set; }
-            public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
-        }
-
-        // 解析結果用のクラス
-        public class ParsedMedicalData
-        {
-            public List<MedicalRecord> Records { get; set; } = new List<MedicalRecord>();
-            public ParsingStatistics Statistics { get; set; }
-            public DateTime ProcessedAt { get; set; } = DateTime.Now;
-            public string Version { get; set; } = "1.0";
+            public string timestamp { get; set; }
+            public string department { get; set; }
+            public string subject { get; set; }
+            public string objectData { get; set; }
+            public string assessment { get; set; }
+            public string plan { get; set; }
+            public string comment { get; set; }
         }
 
         public TextParser()
@@ -45,76 +24,22 @@ namespace MediRecordConverter
         }
 
         /// <summary>
-        /// テキストの解析統計を取得
-        /// </summary>
-        public ParsingStatistics GetParsingStatistics(string text)
-        {
-            var statistics = new ParsingStatistics
-            {
-                ProcessingTime = DateTime.Now
-            };
-
-            try
-            {
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    return statistics;
-                }
-
-                var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.None);
-                statistics.TotalLines = lines.Length;
-                statistics.EmptyLines = lines.Count(line => string.IsNullOrWhiteSpace(line));
-                statistics.ProcessedLines = statistics.TotalLines - statistics.EmptyLines;
-
-                // 日時パターンの検出
-                var dateTimePattern = @"\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{1,2}:\d{1,2}";
-                statistics.DateTimeEntries = lines.Count(line => 
-                    !string.IsNullOrWhiteSpace(line) && Regex.IsMatch(line, dateTimePattern));
-
-                // 重複行の検出
-                var nonEmptyLines = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
-                var uniqueLines = nonEmptyLines.Distinct().ToList();
-                statistics.DuplicateRecords = nonEmptyLines.Count - uniqueLines.Count;
-                statistics.ValidRecords = uniqueLines.Count;
-
-                // 基本的な検証
-                foreach (var line in lines)
-                {
-                    if (!string.IsNullOrWhiteSpace(line))
-                    {
-                        if (line.Length > 1000)
-                        {
-                            statistics.Warnings.Add($"長いレコードが検出されました: {line.Substring(0, 50)}...");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                statistics.Errors.Add($"統計取得エラー: {ex.Message}");
-            }
-
-            return statistics;
-        }
-
-        /// <summary>
         /// 医療テキストを解析してJSONデータに変換
         /// </summary>
-        public ParsedMedicalData ParseMedicalText(string text)
+        public List<MedicalRecord> ParseMedicalText(string text)
         {
-            var result = new ParsedMedicalData();
-            var statistics = GetParsingStatistics(text);
-            result.Statistics = statistics;
+            var records = new List<MedicalRecord>();
 
             try
             {
                 if (string.IsNullOrWhiteSpace(text))
                 {
-                    return result;
+                    return records;
                 }
 
                 var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                var records = new List<MedicalRecord>();
+                MedicalRecord currentRecord = null;
+                string currentDate = "";
 
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -122,182 +47,220 @@ namespace MediRecordConverter
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
 
-                    var record = ProcessRecord(line, i + 1);
-                    if (record != null)
+                    // 日付行の検出
+                    var dateMatch = ExtractDate(line);
+                    if (!string.IsNullOrEmpty(dateMatch))
                     {
-                        records.Add(record);
+                        currentDate = dateMatch;
+                        continue;
+                    }
+
+                    // 医師記録行の検出
+                    var recordMatch = ExtractDoctorRecord(line);
+                    if (recordMatch.HasValue)
+                    {
+                        // 前のレコードを保存
+                        if (currentRecord != null)
+                        {
+                            records.Add(currentRecord);
+                        }
+
+                        // 新しいレコードを開始
+                        currentRecord = new MedicalRecord
+                        {
+                            timestamp = CombineDateAndTime(currentDate, recordMatch.Value.Time),
+                            department = recordMatch.Value.Department
+                        };
+                        continue;
+                    }
+
+                    // SOAP記録の検出と分類
+                    if (currentRecord != null)
+                    {
+                        ClassifySOAPContent(line, currentRecord);
                     }
                 }
 
-                // 重複除去
-                records = RemoveDuplicates(records);
+                // 最後のレコードを追加
+                if (currentRecord != null)
+                {
+                    records.Add(currentRecord);
+                }
 
-                // 日時でグループ化
-                var groupedRecords = GroupRecordsByDateTime(records);
-
-                result.Records = groupedRecords;
+                // 空のフィールドを持つレコードをクリーンアップ
+                records = CleanupRecords(records);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                statistics.Errors.Add($"テキスト解析エラー: {ex.Message}");
+                // エラーは無視してこれまでの結果を返す
             }
 
-            return result;
+            return records;
         }
 
         /// <summary>
-        /// 個別のレコードを処理
+        /// 日付を抽出
         /// </summary>
-        private MedicalRecord ProcessRecord(string line, int lineNumber)
+        private string ExtractDate(string line)
         {
-            try
+            var datePattern = @"(\d{4}/\d{1,2}/\d{1,2})";
+            var match = Regex.Match(line, datePattern);
+            if (match.Success)
             {
-                var record = new MedicalRecord
+                try
                 {
-                    Id = $"record_{lineNumber}_{DateTime.Now.Ticks}",
-                    Content = line,
-                    Type = DetermineRecordType(line)
-                };
+                    var dateStr = match.Groups[1].Value;
+                    var dateParts = dateStr.Split('/');
+                    var year = int.Parse(dateParts[0]);
+                    var month = int.Parse(dateParts[1]);
+                    var day = int.Parse(dateParts[2]);
 
-                // 日時の抽出を試行
-                record.DateTime = ExtractDateTime(line);
-
-                // メタデータの設定
-                record.Metadata["lineNumber"] = lineNumber;
-                record.Metadata["contentLength"] = line.Length;
-                record.Metadata["hasDateTime"] = record.DateTime.HasValue;
-
-                return record;
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// レコードタイプを判定
-        /// </summary>
-        private string DetermineRecordType(string content)
-        {
-            if (string.IsNullOrWhiteSpace(content))
-                return "unknown";
-
-            // 日時パターンがある場合
-            if (Regex.IsMatch(content, @"\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{1,2}:\d{1,2}"))
-                return "timestamped_entry";
-
-            // 数値が含まれる場合
-            if (Regex.IsMatch(content, @"\d+"))
-                return "measurement";
-
-            // 薬剤名などのパターン
-            if (content.Contains("mg") || content.Contains("ml") || content.Contains("錠"))
-                return "medication";
-
-            // 症状や所見
-            if (content.Contains("痛み") || content.Contains("症状") || content.Contains("所見"))
-                return "symptom";
-
-            return "general_note";
-        }
-
-        /// <summary>
-        /// 文字列から日時を抽出
-        /// </summary>
-        private DateTime? ExtractDateTime(string content)
-        {
-            try
-            {
-                // 日時パターンのリスト
-                var patterns = new[]
+                    return new DateTime(year, month, day).ToString("yyyy-MM-ddT");
+                }
+                catch
                 {
-                    @"(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2})",
-                    @"(\d{4})[-/](\d{1,2})[-/](\d{1,2})",
-                    @"(\d{1,2})[-/](\d{1,2})[-/](\d{4})",
-                    @"(\d{1,2}):(\d{1,2})"
-                };
-
-                foreach (var pattern in patterns)
-                {
-                    var match = Regex.Match(content, pattern);
-                    if (match.Success)
-                    {
-                        try
-                        {
-                            if (pattern.Contains("yyyy") || match.Groups.Count >= 4)
-                            {
-                                // 完全な日付
-                                var year = int.Parse(match.Groups[1].Value);
-                                var month = int.Parse(match.Groups[2].Value);
-                                var day = int.Parse(match.Groups[3].Value);
-                                
-                                if (match.Groups.Count >= 6)
-                                {
-                                    // 時刻も含む
-                                    var hour = int.Parse(match.Groups[4].Value);
-                                    var minute = int.Parse(match.Groups[5].Value);
-                                    return new DateTime(year, month, day, hour, minute, 0);
-                                }
-                                else
-                                {
-                                    return new DateTime(year, month, day);
-                                }
-                            }
-                            else if (match.Groups.Count == 3)
-                            {
-                                // 時刻のみ
-                                var hour = int.Parse(match.Groups[1].Value);
-                                var minute = int.Parse(match.Groups[2].Value);
-                                return DateTime.Today.AddHours(hour).AddMinutes(minute);
-                            }
-                        }
-                        catch
-                        {
-                            continue;
-                        }
-                    }
+                    return null;
                 }
             }
-            catch
+            return null;
+        }
+
+        /// <summary>
+        /// 医師記録行を抽出
+        /// </summary>
+        private (string Department, string Time)? ExtractDoctorRecord(string line)
+        {
+            // パターン: 科名　　医師名　　分類　　時刻
+            var pattern = @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)\s+.*?\s+(\d{1,2}:\d{1,2})";
+            var match = Regex.Match(line, pattern);
+
+            if (match.Success)
             {
-                // 日時抽出に失敗した場合は null を返す
+                return (match.Groups[1].Value, match.Groups[2].Value);
             }
 
             return null;
         }
 
         /// <summary>
-        /// 重複レコードを除去
+        /// 日付と時刻を結合してISO形式のタイムスタンプを作成
         /// </summary>
-        private List<MedicalRecord> RemoveDuplicates(List<MedicalRecord> records)
+        private string CombineDateAndTime(string date, string time)
         {
-            var uniqueRecords = new List<MedicalRecord>();
-            var seenContents = new HashSet<string>();
+            if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(time))
+                return "";
 
-            foreach (var record in records)
+            try
             {
-                var normalizedContent = record.Content?.Trim().ToLower();
-                if (!string.IsNullOrEmpty(normalizedContent) && !seenContents.Contains(normalizedContent))
-                {
-                    seenContents.Add(normalizedContent);
-                    uniqueRecords.Add(record);
-                }
-            }
+                var timeParts = time.Split(':');
+                var hour = int.Parse(timeParts[0]);
+                var minute = int.Parse(timeParts[1]);
 
-            return uniqueRecords;
+                return $"{date}{hour:D2}:{minute:D2}:00Z";
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         /// <summary>
-        /// 日時でレコードをグループ化
+        /// SOAPコンテンツを分類
         /// </summary>
-        private List<MedicalRecord> GroupRecordsByDateTime(List<MedicalRecord> records)
+        private void ClassifySOAPContent(string line, MedicalRecord record)
         {
-            // 日時順にソート
-            return records
-                .OrderBy(r => r.DateTime ?? DateTime.MaxValue)
-                .ThenBy(r => r.Metadata.ContainsKey("lineNumber") ? (int)r.Metadata["lineNumber"] : 0)
-                .ToList();
+            if (line.StartsWith("S >"))
+            {
+                record.subject = AppendContent(record.subject, line.Substring(3).Trim());
+            }
+            else if (line.StartsWith("O >"))
+            {
+                record.objectData = AppendContent(record.objectData, line.Substring(3).Trim());
+            }
+            else if (line.StartsWith("A >"))
+            {
+                record.assessment = AppendContent(record.assessment, line.Substring(3).Trim());
+            }
+            else if (line.StartsWith("P >"))
+            {
+                record.plan = AppendContent(record.plan, line.Substring(3).Trim());
+            }
+            else if (line.StartsWith("F >"))
+            {
+                record.comment = AppendContent(record.comment, line.Substring(3).Trim());
+            }
+            else if (!string.IsNullOrWhiteSpace(line) && !line.Contains("　　"))
+            {
+                // 継続行として前のフィールドに追加
+                if (!string.IsNullOrEmpty(record.plan))
+                {
+                    record.plan = AppendContent(record.plan, line);
+                }
+                else if (!string.IsNullOrEmpty(record.assessment))
+                {
+                    record.assessment = AppendContent(record.assessment, line);
+                }
+                else if (!string.IsNullOrEmpty(record.objectData))
+                {
+                    record.objectData = AppendContent(record.objectData, line);
+                }
+                else if (!string.IsNullOrEmpty(record.subject))
+                {
+                    record.subject = AppendContent(record.subject, line);
+                }
+            }
+        }
+
+        /// <summary>
+        /// コンテンツを改行で結合
+        /// </summary>
+        private string AppendContent(string existing, string newContent)
+        {
+            if (string.IsNullOrEmpty(existing))
+                return newContent;
+
+            if (string.IsNullOrEmpty(newContent))
+                return existing;
+
+            return existing + "\n" + newContent;
+        }
+
+        /// <summary>
+        /// 空のフィールドを持つレコードをクリーンアップ
+        /// </summary>
+        private List<MedicalRecord> CleanupRecords(List<MedicalRecord> records)
+        {
+            var cleanedRecords = new List<MedicalRecord>();
+
+            foreach (var record in records)
+            {
+                // すべてのフィールドが空でないレコードのみを保持
+
+                if (!string.IsNullOrEmpty(record.timestamp) &&
+                    (!string.IsNullOrEmpty(record.subject) ||
+                     !string.IsNullOrEmpty(record.objectData) ||
+                     !string.IsNullOrEmpty(record.assessment) ||
+                     !string.IsNullOrEmpty(record.plan) ||
+                     !string.IsNullOrEmpty(record.comment)))
+                {
+                    // nullフィールドを空文字に変換
+                    var cleanRecord = new MedicalRecord
+                    {
+                        timestamp = record.timestamp ?? "",
+                        department = record.department ?? "",
+                        subject = record.subject ?? "",
+                        objectData = record.objectData ?? "",
+                        assessment = record.assessment ?? "",
+                        plan = record.plan ?? "",
+                        comment = record.comment ?? ""
+                    };
+
+                    // 空の文字列フィールドは含めない（JSONサイズ削減）
+                    cleanedRecords.Add(cleanRecord);
+                }
+            }
+
+            return cleanedRecords;
         }
     }
 }

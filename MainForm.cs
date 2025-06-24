@@ -15,7 +15,7 @@ namespace MediRecordConverter
         private bool isMonitoringClipboard = false;
         private string clipboardContent = "";
         private bool isFirstCheck = true;
-        private System.Windows.Forms.Timer clipboardTimer; // 明示的に指定
+        private System.Windows.Forms.Timer clipboardTimer;
         private ConfigManager config;
         private TextParser textParser;
         private TextBox textInput;
@@ -28,12 +28,11 @@ namespace MediRecordConverter
             config = new ConfigManager();
             textParser = new TextParser();
             InitializeComponent();
-            InitializeCustomComponents(); // カスタム初期化を分離
+            InitializeCustomComponents();
             SetupClipboardMonitoring();
             UpdateStats();
         }
 
-        // 以下は既存のコードと同じ
         private void InitializeCustomComponents()
         {
             // フォームの基本設定
@@ -108,19 +107,18 @@ namespace MediRecordConverter
             buttonPanel.FlowDirection = FlowDirection.LeftToRight;
             buttonPanel.Padding = new Padding(10);
 
-            // ボタン作成（統計表示ボタンを追加）
+            // ボタン作成（統計表示ボタンを削除）
             Button newButton = CreateButton("新規登録", StartMonitoring);
             Button soapButton = CreateButton("詳細検索設定", RunMouseAutomation);
             Button soapCopyButton = CreateButton("カルテコピー", SoapCopy);
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
-            Button statsButton = CreateButton("解析統計", ShowDetailedStats);  // 新規追加
             Button clearButton = CreateButton("テキストクリア", ClearText);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
             Button closeButton = CreateButton("閉じる", (s, e) => this.Close());
 
             buttonPanel.Controls.AddRange(new Control[] {
                 newButton, soapButton, soapCopyButton, convertButton,
-                statsButton, clearButton, editorButton, closeButton
+                clearButton, editorButton, closeButton
             });
 
             // メインレイアウトに追加
@@ -144,7 +142,7 @@ namespace MediRecordConverter
 
         private void SetupClipboardMonitoring()
         {
-            clipboardTimer = new System.Windows.Forms.Timer(); // 明示的に指定
+            clipboardTimer = new System.Windows.Forms.Timer();
             clipboardTimer.Interval = 500;
             clipboardTimer.Tick += CheckClipboard;
             clipboardTimer.Start();
@@ -190,7 +188,7 @@ namespace MediRecordConverter
             string originalTitle = this.Text;
             this.Text = $"{originalTitle} - {message}";
 
-            System.Windows.Forms.Timer notificationTimer = new System.Windows.Forms.Timer(); // 明示的に指定
+            System.Windows.Forms.Timer notificationTimer = new System.Windows.Forms.Timer();
             notificationTimer.Interval = 2000;
             notificationTimer.Tick += (s, e) =>
             {
@@ -301,7 +299,7 @@ namespace MediRecordConverter
             }
         }
 
-        // MainForm.csのConvertToJsonメソッドの修正版
+        // 簡素化されたJSON変換メソッド
         private void ConvertToJson(object sender, EventArgs e)
         {
             try
@@ -316,55 +314,21 @@ namespace MediRecordConverter
 
                 SetMonitoringState(false);
 
-                // 解析統計を取得
-                var statistics = textParser.GetParsingStatistics(text);
-
-                // 医療記録データを解析
+                // 医療記録データを解析（統計機能削除）
                 var parsedData = textParser.ParseMedicalText(text);
 
-                // JSON形式に変換
+                // JSON形式に変換（コンパクト設定）
                 string jsonData = JsonConvert.SerializeObject(parsedData, Formatting.Indented);
 
                 textOutput.Text = jsonData;
                 Clipboard.SetText(jsonData);
 
-                // 統計情報を含む完了メッセージ
-                var statsJson = JsonConvert.SerializeObject(statistics, Formatting.Indented);
-                var statsInfo = $"解析統計:\n{statsJson}";
-
-                MessageBox.Show($"JSON形式に変換しコピーしました\n\n{statsInfo}",
+                MessageBox.Show("JSON形式に変換してクリップボードにコピーしました。",
                                "変換完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"変換中にエラーが発生しました: {ex.Message}\n\nスタックトレース:\n{ex.StackTrace}",
-                               "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        // 統計情報を表示するメソッドを追加
-        private void ShowDetailedStats(object sender, EventArgs e)
-        {
-            try
-            {
-                string text = textInput.Text;
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    MessageBox.Show("解析するテキストがありません。", "警告",
-                                   MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                var statistics = textParser.GetParsingStatistics(text);
-                string statsJson = JsonConvert.SerializeObject(statistics, Formatting.Indented);
-
-                // 統計情報表示用のフォームまたはメッセージボックス
-                MessageBox.Show($"解析統計情報:\n\n{statsJson}",
-                               "解析統計", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"統計取得中にエラーが発生しました: {ex.Message}",
+                MessageBox.Show($"変換中にエラーが発生しました: {ex.Message}",
                                "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
