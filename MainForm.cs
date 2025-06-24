@@ -300,6 +300,10 @@ namespace MediRecordConverter
         }
 
         // 簡素化されたJSON変換メソッド
+        // MainForm.csのConvertToJsonメソッドの修正版
+        // この部分のみを既存のMainForm.csに置き換えてください
+
+        // 簡素化されたJSON変換メソッド（修正版）
         private void ConvertToJson(object sender, EventArgs e)
         {
             try
@@ -314,16 +318,23 @@ namespace MediRecordConverter
 
                 SetMonitoringState(false);
 
-                // 医療記録データを解析（統計機能削除）
+                // 医療記録データを解析（統計機能削除、ソート機能追加）
                 var parsedData = textParser.ParseMedicalText(text);
 
-                // JSON形式に変換（コンパクト設定）
-                string jsonData = JsonConvert.SerializeObject(parsedData, Formatting.Indented);
+                // JSON形式に変換（空のフィールドを除外する設定）
+                var jsonSettings = new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    DefaultValueHandling = DefaultValueHandling.Ignore
+                };
+
+                string jsonData = JsonConvert.SerializeObject(parsedData, jsonSettings);
 
                 textOutput.Text = jsonData;
                 Clipboard.SetText(jsonData);
 
-                MessageBox.Show("JSON形式に変換してクリップボードにコピーしました。",
+                MessageBox.Show($"JSON形式に変換してクリップボードにコピーしました。",
                                "変換完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)

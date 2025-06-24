@@ -2,21 +2,61 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace MediRecordConverter
 {
     public class TextParser
     {
-        // 医療記録用のクラス（簡素化）
+        // 医療記録用のクラス（修正版）
         public class MedicalRecord
         {
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string timestamp { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string department { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string subject { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string objectData { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string assessment { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string plan { get; set; }
+
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string comment { get; set; }
+
+            // 空の文字列プロパティを除外するためのメソッド
+            public bool ShouldSerializesubject()
+            {
+                return !string.IsNullOrEmpty(subject);
+            }
+
+            public bool ShouldSerializeobjectData()
+            {
+                return !string.IsNullOrEmpty(objectData);
+            }
+
+            public bool ShouldSerializeassessment()
+            {
+                return !string.IsNullOrEmpty(assessment);
+            }
+
+            public bool ShouldSerializeplan()
+            {
+                return !string.IsNullOrEmpty(plan);
+            }
+
+            public bool ShouldSerializecomment()
+            {
+                return !string.IsNullOrEmpty(comment);
+            }
         }
 
         public TextParser()
@@ -24,7 +64,7 @@ namespace MediRecordConverter
         }
 
         /// <summary>
-        /// 医療テキストを解析してJSONデータに変換
+        /// 医療テキストを解析してJSONデータに変換（修正版）
         /// </summary>
         public List<MedicalRecord> ParseMedicalText(string text)
         {
@@ -94,6 +134,9 @@ namespace MediRecordConverter
 
                 // 空のフィールドを持つレコードをクリーンアップ
                 records = CleanupRecords(records);
+
+                // 日付時刻順にソート（古い順）
+                records = SortRecordsByDateTime(records);
             }
             catch (Exception ex)
             {
@@ -102,6 +145,21 @@ namespace MediRecordConverter
             }
 
             return records;
+        }
+
+        /// <summary>
+        /// レコードを日付時刻順（古い順）にソート
+        /// </summary>
+        private List<MedicalRecord> SortRecordsByDateTime(List<MedicalRecord> records)
+        {
+            return records.OrderBy(record =>
+            {
+                if (DateTime.TryParse(record.timestamp?.Replace("Z", ""), out DateTime parsedDate))
+                {
+                    return parsedDate;
+                }
+                return DateTime.MinValue; // パースできない場合は最も古い日付として扱う
+            }).ToList();
         }
 
         /// <summary>
@@ -314,11 +372,11 @@ namespace MediRecordConverter
                     {
                         timestamp = record.timestamp ?? "",
                         department = record.department ?? "",
-                        subject = record.subject ?? "",
-                        objectData = record.objectData ?? "",
-                        assessment = record.assessment ?? "",
-                        plan = record.plan ?? "",
-                        comment = record.comment ?? ""
+                        subject = string.IsNullOrEmpty(record.subject) ? null : record.subject,
+                        objectData = string.IsNullOrEmpty(record.objectData) ? null : record.objectData,
+                        assessment = string.IsNullOrEmpty(record.assessment) ? null : record.assessment,
+                        plan = string.IsNullOrEmpty(record.plan) ? null : record.plan,
+                        comment = string.IsNullOrEmpty(record.comment) ? null : record.comment
                     };
 
                     cleanedRecords.Add(cleanRecord);
