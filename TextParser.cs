@@ -2,67 +2,136 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace MediRecordConverter
 {
+    // 医療記録を表すデータクラス
+    public class MedicalRecord
+    {
+        public string Date { get; set; }
+        public string Department { get; set; }
+        public string Time { get; set; }
+        public string SoapSection { get; set; }
+        public string Content { get; set; }
+    }
+
+    // グループ化された医療記録を表すクラス
+    public class GroupedMedicalRecord
+    {
+        public string Timestamp { get; set; }
+        public string Department { get; set; }
+        public string Subject { get; set; }
+        public string Object { get; set; }
+        public string Assessment { get; set; }
+        public string Plan { get; set; }
+        public string Comment { get; set; }
+        public string Summary { get; set; }
+
+        // JSON出力用のクリーンアップされたオブジェクトを返す
+        public object ToJsonObject()
+        {
+            var result = new Dictionary<string, object>();
+
+            if (!string.IsNullOrEmpty(Timestamp))
+                result["timestamp"] = Timestamp;
+            if (!string.IsNullOrEmpty(Department))
+                result["department"] = Department;
+            if (!string.IsNullOrEmpty(Subject))
+                result["subject"] = Subject;
+            if (!string.IsNullOrEmpty(Object))
+                result["object"] = Object;
+            if (!string.IsNullOrEmpty(Assessment))
+                result["assessment"] = Assessment;
+            if (!string.IsNullOrEmpty(Plan))
+                result["plan"] = Plan;
+            if (!string.IsNullOrEmpty(Comment))
+                result["comment"] = Comment;
+            if (!string.IsNullOrEmpty(Summary))
+                result["summary"] = Summary;
+
+            return result;
+        }
+    }
+
     public class TextParser
     {
+        // 正規表現パターン
+        private readonly Regex datePattern = new Regex(@"(\d{4}/\d{2}/\d{2}\(.?\))(?:\s*（入院\s*(\d+)\s*日目）)?");
+        private readonly Regex entryPattern = new Regex(@"(.+?)\s+(.+?)\s+(.+?)\s+(\d{2}:\d{2})");
+        private readonly Regex soapPattern = new Regex(@"([SOAPFサ])\s*>");
+
         public object ParseMedicalText(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
-                return new { content = "", lines = new string[0], metadata = new { } };
+                return new List<object>();
             }
 
-            var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            var records = ParseRecords(text);
+            var groupedRecords = GroupRecordsByDateTime(records);
+            var finalRecords = RemoveDuplicates(groupedRecords);
 
-            // 基本的なJSONオブジェクトを作成
-            var result = new
-            {
-                content = text,
-                lines = lines,
-                metadata = new
-                {
-                    lineCount = lines.Length,
-                    characterCount = text.Length,
-                    processedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                    sections = ParseSections(lines)
-                }
-            };
-
-            return result;
+            // JSON出力用にクリーンアップされたオブジェクトのリストを返す
+            return finalRecords.Select(r => r.ToJsonObject()).ToList();
         }
 
-        private object ParseSections(string[] lines)
+        private List<MedicalRecord> ParseRecords(string text)
         {
-            var sections = new List<object>();
+            var records = new List<MedicalRecord>();
+            var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.None);
+
+            var currentRecord = new MedicalRecord();
+            var contentBuffer = new StringBuilder();
 
             foreach (var line in lines)
             {
-                if (!string.IsNullOrWhiteSpace(line))
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine))
+                    continue;
+
+                // 日付パターンをチェック
+                var dateMatch = datePattern.Match(trimmedLine);
+                if (dateMatch.Success)
                 {
-                    sections.Add(new
-                    {
-                        text = line.Trim(),
-                        length = line.Trim().Length,
-                        type = DetermineLineType(line.Trim())
-                    });
+                    ProcessRecord(currentRecord, contentBuffer.ToString(), records);
+                    currentRecord = new MedicalRecord { Date = dateMatch.Groups[1].Value };
+                    contentBuffer.Clear();
+                    continue;
+                }
+
+                // エントリーパターンをチェック（部門、時間など）
+                var entryMatch = entryPattern.Match(trimmedLine);
+                if (entryMatch.Success && !string.IsNullOrEmpty(currentRecord.Date))
+                {
+                    ProcessRecord(currentRecord, contentBuffer.ToString(), records);
+                    currentRecord.Department = entryMatch.Groups[1].Value.Trim();
+                    currentRecord.Time = entryMatch.Groups[4].Value.Trim();
+                    contentBuffer.Clear();
+                    continue;
+                }
+
+                // SOAPパターンをチェック
+                var soapMatch = soapPattern.Match(trimmedLine);
+                if (soapMatch.Success && !string.IsNullOrEmpty(currentRecord.Department))
+                {
+                    ProcessRecord(currentRecord, contentBuffer.ToString(), records);
+                    currentRecord.SoapSection = soapMatch.Groups[1].Value;
+                    contentBuffer.Clear();
+                    continue;
+                }
+
+                // コンテンツの蓄積
+                if (!string.IsNullOrEmpty(currentRecord.SoapSection))
+                {
+                    contentBuffer.AppendLine(trimmedLine);
                 }
             }
 
-            return sections;
-        }
+            // 最後のレコードを処理
+            ProcessRecord(currentRecord, contentBuffer.ToString(), records);
 
-        private string DetermineLineType(string line)
-        {
-            // 簡単な分類ロジック
-            if (line.Contains("：") || line.Contains(":"))
-                return "header";
-            else if (line.Length < 20)
-                return "short";
-            else
-                return "content";
+            return records;
         }
     }
 }

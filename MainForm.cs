@@ -108,18 +108,19 @@ namespace MediRecordConverter
             buttonPanel.FlowDirection = FlowDirection.LeftToRight;
             buttonPanel.Padding = new Padding(10);
 
-            // ボタン作成
+            // ボタン作成（統計表示ボタンを追加）
             Button newButton = CreateButton("新規登録", StartMonitoring);
             Button soapButton = CreateButton("詳細検索設定", RunMouseAutomation);
             Button soapCopyButton = CreateButton("カルテコピー", SoapCopy);
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
+            Button statsButton = CreateButton("解析統計", ShowDetailedStats);  // 新規追加
             Button clearButton = CreateButton("テキストクリア", ClearText);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
             Button closeButton = CreateButton("閉じる", (s, e) => this.Close());
 
             buttonPanel.Controls.AddRange(new Control[] {
                 newButton, soapButton, soapCopyButton, convertButton,
-                clearButton, editorButton, closeButton
+                statsButton, clearButton, editorButton, closeButton
             });
 
             // メインレイアウトに追加
@@ -135,7 +136,7 @@ namespace MediRecordConverter
         {
             Button button = new Button();
             button.Text = text;
-            button.Size = new Size(config.ButtonWidth, config.ButtonHeight);
+            button.Size = new Size(120, 40);
             button.Margin = new Padding(5);
             button.Click += clickHandler;
             return button;
@@ -300,6 +301,7 @@ namespace MediRecordConverter
             }
         }
 
+        // MainForm.csのConvertToJsonメソッドの修正版
         private void ConvertToJson(object sender, EventArgs e)
         {
             try
@@ -314,19 +316,56 @@ namespace MediRecordConverter
 
                 SetMonitoringState(false);
 
+                // 解析統計を取得
+                var statistics = textParser.GetParsingStatistics(text);
+
+                // 医療記録データを解析
                 var parsedData = textParser.ParseMedicalText(text);
+
+                // JSON形式に変換
                 string jsonData = JsonConvert.SerializeObject(parsedData, Formatting.Indented);
 
                 textOutput.Text = jsonData;
                 Clipboard.SetText(jsonData);
 
-                MessageBox.Show("JSON形式に変換しコピーしました", "完了",
-                               MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // 統計情報を含む完了メッセージ
+                var statsJson = JsonConvert.SerializeObject(statistics, Formatting.Indented);
+                var statsInfo = $"解析統計:\n{statsJson}";
+
+                MessageBox.Show($"JSON形式に変換しコピーしました\n\n{statsInfo}",
+                               "変換完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"変換中にエラーが発生しました: {ex.Message}", "エラー",
-                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"変換中にエラーが発生しました: {ex.Message}\n\nスタックトレース:\n{ex.StackTrace}",
+                               "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 統計情報を表示するメソッドを追加
+        private void ShowDetailedStats(object sender, EventArgs e)
+        {
+            try
+            {
+                string text = textInput.Text;
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    MessageBox.Show("解析するテキストがありません。", "警告",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var statistics = textParser.GetParsingStatistics(text);
+                string statsJson = JsonConvert.SerializeObject(statistics, Formatting.Indented);
+
+                // 統計情報表示用のフォームまたはメッセージボックス
+                MessageBox.Show($"解析統計情報:\n\n{statsJson}",
+                               "解析統計", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"統計取得中にエラーが発生しました: {ex.Message}",
+                               "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
