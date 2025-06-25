@@ -36,7 +36,7 @@ namespace MediRecordConverter
         private void InitializeCustomComponents()
         {
             // フォームの基本設定
-            this.Text = $"JSON形式変換 v1.0";
+            this.Text = $"MediRecordConverter";
             this.Size = new Size(config.WindowWidth, config.WindowHeight);
             this.StartPosition = FormStartPosition.Manual;
             this.Location = new Point(10, 10);
