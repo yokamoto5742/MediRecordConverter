@@ -53,7 +53,7 @@ namespace MediRecordConverter
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100F));
 
             // カルテ記載グループボックス
             GroupBox karteGroup = new GroupBox();
@@ -105,6 +105,7 @@ namespace MediRecordConverter
             FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
             buttonPanel.Dock = DockStyle.Fill;
             buttonPanel.FlowDirection = FlowDirection.LeftToRight;
+            buttonPanel.WrapContents = true;
             buttonPanel.Padding = new Padding(10);
 
             // ボタン作成（統計表示ボタンを削除）
@@ -134,7 +135,7 @@ namespace MediRecordConverter
         {
             Button button = new Button();
             button.Text = text;
-            button.Size = new Size(120, 40);
+            button.Size = new Size(100, 30);
             button.Margin = new Padding(5);
             button.Click += clickHandler;
             return button;
