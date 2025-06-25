@@ -283,7 +283,35 @@ namespace MediRecordConverter
                 if (File.Exists(config.SoapCopyFilePath))
                 {
                     Process.Start(config.SoapCopyFilePath);
-                    ShowNotification("カルテをコピーして次ページに移動しました");
+                    ShowAutoCloseMessage("カルテをコピーして次ページに移動しました");
+                }
+                else
+                {
+                    MessageBox.Show($"ファイルが見つかりません: {config.SoapCopyFilePath}", "エラー",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"SOAPコピー中にエラーが発生しました: {ex.Message}", "エラー",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                this.WindowState = FormWindowState.Normal;
+            }
+        }
+        private void SoapCopy(object sender, EventArgs e)
+        {
+            try
+            {
+                this.WindowState = FormWindowState.Minimized;
+
+                if (File.Exists(config.SoapCopyFilePath))
+                {
+                    Process.Start(config.SoapCopyFilePath);
+                    // 修正点：soapcopy.exe実行後に2秒間自動で閉じるポップアップメッセージを表示
+                    ShowAutoCloseMessage("カルテをコピーして次ページに移動しました");
                 }
                 else
                 {
@@ -302,11 +330,42 @@ namespace MediRecordConverter
             }
         }
 
-        // 簡素化されたJSON変換メソッド
-        // MainForm.csのConvertToJsonメソッドの修正版
-        // この部分のみを既存のMainForm.csに置き換えてください
+        private void ShowAutoCloseMessage(string message)
+        {
+            Form popup = new Form();
+            popup.Text = "処理完了";
+            popup.Size = new Size(350, 120);
+            popup.StartPosition = FormStartPosition.CenterParent;
+            popup.FormBorderStyle = FormBorderStyle.FixedDialog;
+            popup.MaximizeBox = false;
+            popup.MinimizeBox = false;
+            popup.TopMost = true;
 
-        // 簡素化されたJSON変換メソッド（修正版）
+            Label label = new Label();
+            label.Text = message;
+            label.AutoSize = false;
+            label.Size = new Size(320, 60);
+            label.Location = new Point(15, 20);
+            label.TextAlign = ContentAlignment.MiddleCenter;
+            label.Font = new Font("MS Gothic", 10);
+
+            popup.Controls.Add(label);
+
+            // 2秒後に自動で閉じるタイマー
+            System.Windows.Forms.Timer autoCloseTimer = new System.Windows.Forms.Timer();
+            autoCloseTimer.Interval = 2000;
+            autoCloseTimer.Tick += (s, e) =>
+            {
+                autoCloseTimer.Stop();
+                autoCloseTimer.Dispose();
+                popup.Close();
+                popup.Dispose();
+            };
+
+            autoCloseTimer.Start();
+            popup.ShowDialog(this);
+        }
+
         private void ConvertToJson(object sender, EventArgs e)
         {
             try
