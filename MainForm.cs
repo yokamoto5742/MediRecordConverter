@@ -283,6 +283,7 @@ namespace MediRecordConverter
                 if (File.Exists(config.SoapCopyFilePath))
                 {
                     Process.Start(config.SoapCopyFilePath);
+                    ShowNotification("カルテをコピーして次ページに移動しました");
                 }
                 else
                 {
