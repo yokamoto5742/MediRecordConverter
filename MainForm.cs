@@ -40,7 +40,7 @@ namespace MediRecordConverter
             this.Size = new Size(config.WindowWidth, config.WindowHeight);
             this.StartPosition = FormStartPosition.Manual;
             this.Location = new Point(10, 10);
-            this.MinimumSize = new Size(600, 400);
+            this.MinimumSize = new Size(500, 400);
 
             // フォントの設定
             Font textFont = new Font(config.TextAreaFontName, config.TextAreaFontSize);
