@@ -252,6 +252,7 @@ namespace MediRecordConverter
 
                 if (File.Exists(config.OperationFilePath))
                 {
+                    Thread.Sleep(500); // 0.5秒待機
                     Process.Start(config.OperationFilePath);
                     ShowNotification("設定完了");
                 }
