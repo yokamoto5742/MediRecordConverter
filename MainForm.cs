@@ -39,7 +39,7 @@ namespace MediRecordConverter
             this.Text = $"MediRecordConverter";
             this.Size = new Size(config.WindowWidth, config.WindowHeight);
             this.StartPosition = FormStartPosition.Manual;
-            this.Location = new Point(10, 10);
+            this.Location = config.GetMainWindowPosition(config.WindowWidth, config.WindowHeight);
             this.MinimumSize = new Size(500, 400);
 
             // フォントの設定
