@@ -301,35 +301,7 @@ namespace MediRecordConverter
                 this.WindowState = FormWindowState.Normal;
             }
         }
-        private void SoapCopy(object sender, EventArgs e)
-        {
-            try
-            {
-                this.WindowState = FormWindowState.Minimized;
-
-                if (File.Exists(config.SoapCopyFilePath))
-                {
-                    Process.Start(config.SoapCopyFilePath);
-                    // 修正点：soapcopy.exe実行後に2秒間自動で閉じるポップアップメッセージを表示
-                    ShowAutoCloseMessage("カルテをコピーして次ページに移動しました");
-                }
-                else
-                {
-                    MessageBox.Show($"ファイルが見つかりません: {config.SoapCopyFilePath}", "エラー",
-                                   MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"SOAPコピー中にエラーが発生しました: {ex.Message}", "エラー",
-                               MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                this.WindowState = FormWindowState.Normal;
-            }
-        }
-
+        
         private void ShowAutoCloseMessage(string message)
         {
             Form popup = new Form();
