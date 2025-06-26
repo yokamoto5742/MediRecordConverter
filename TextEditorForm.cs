@@ -10,10 +10,12 @@ namespace MediRecordConverter
         private Button closeButton;
         private Button saveButton;
         private string initialText;
+        private ConfigManager config;
 
-        public TextEditorForm(string text)
+        public TextEditorForm(string text, ConfigManager configManager = null)
         {
             this.initialText = text ?? "";
+            this.config = configManager ?? new ConfigManager();
             InitializeComponent();
         }
 
@@ -22,8 +24,8 @@ namespace MediRecordConverter
             this.SuspendLayout();
 
             // フォームの基本設定
-            this.Text = "テキスト確認画面";
-            this.Size = new Size(800, 600);
+            this.Text = "確認画面";
+            this.Size = new Size(config.EditorWidth, config.EditorHeight);  // 設定値を使用
             this.StartPosition = FormStartPosition.CenterParent;
             this.MinimumSize = new Size(400, 300);
 
@@ -40,7 +42,7 @@ namespace MediRecordConverter
             textEditor.Multiline = true;
             textEditor.ScrollBars = ScrollBars.Both;
             textEditor.Dock = DockStyle.Fill;
-            textEditor.Font = new Font("MS Gothic", 12);
+            textEditor.Font = new Font(config.TextAreaFontName, config.TextAreaFontSize);
             textEditor.Text = initialText;
 
             // ボタンパネル

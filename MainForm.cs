@@ -135,7 +135,7 @@ namespace MediRecordConverter
         {
             Button button = new Button();
             button.Text = text;
-            button.Size = new Size(100, 30);
+            button.Size = new Size(config.ButtonWidth, config.ButtonHeight);
             button.Margin = new Padding(5);
             button.Click += clickHandler;
             return button;
@@ -283,7 +283,7 @@ namespace MediRecordConverter
                 if (File.Exists(config.SoapCopyFilePath))
                 {
                     Process.Start(config.SoapCopyFilePath);
-                    ShowAutoCloseMessage("カルテをコピーして次ページに移動しました");
+                    ShowAutoCloseMessage("コピーして次ページに進みました");
                 }
                 else
                 {
@@ -307,7 +307,7 @@ namespace MediRecordConverter
             Form popup = new Form();
             popup.Text = "処理完了";
             popup.Size = new Size(350, 120);
-            popup.StartPosition = FormStartPosition.CenterParent;
+            popup.StartPosition = FormStartPosition.CenterScreen;
             popup.FormBorderStyle = FormBorderStyle.FixedDialog;
             popup.MaximizeBox = false;
             popup.MinimizeBox = false;
@@ -323,9 +323,8 @@ namespace MediRecordConverter
 
             popup.Controls.Add(label);
 
-            // 2秒後に自動で閉じるタイマー
             System.Windows.Forms.Timer autoCloseTimer = new System.Windows.Forms.Timer();
-            autoCloseTimer.Interval = 2000;
+            autoCloseTimer.Interval = 1500;
             autoCloseTimer.Tick += (s, e) =>
             {
                 autoCloseTimer.Stop();
@@ -390,7 +389,7 @@ namespace MediRecordConverter
             SetMonitoringState(false);
             this.Hide();
 
-            TextEditorForm editor = new TextEditorForm("");
+            TextEditorForm editor = new TextEditorForm("", config);
             editor.FormClosed += (s, args) =>
             {
                 this.Show();
