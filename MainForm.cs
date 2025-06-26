@@ -366,8 +366,7 @@ namespace MediRecordConverter
                 textOutput.Text = jsonData;
                 Clipboard.SetText(jsonData);
 
-                MessageBox.Show($"JSON形式に変換してクリップボードにコピーしました。",
-                               "変換完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowAutoCloseMessage("変換してクリップボードにコピーしました");
             }
             catch (Exception ex)
             {
