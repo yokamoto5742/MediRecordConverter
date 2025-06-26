@@ -8,7 +8,7 @@ namespace MediRecordConverter
 {
     public class TextParser
     {
-        // 医療記録用のクラス（修正版）
+        // 医療記録用のクラス
         public class MedicalRecord
         {
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -35,11 +35,9 @@ namespace MediRecordConverter
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public string summary { get; set; }
 
-            // 修正：現在処理中のSOAPセクションを追跡
             [JsonIgnore]
             public string currentSoapSection { get; set; } = "";
 
-            // 空の文字列プロパティを除外するためのメソッド
             public bool ShouldSerializesubject()
             {
                 return !string.IsNullOrEmpty(subject);
@@ -76,7 +74,7 @@ namespace MediRecordConverter
         }
 
         /// <summary>
-        /// 医療テキストを解析してJSONデータに変換（修正版）
+        /// 医療テキストを解析してJSONデータに変換（処理順序修正版）
         /// </summary>
         public List<MedicalRecord> ParseMedicalText(string text)
         {
@@ -86,6 +84,7 @@ namespace MediRecordConverter
             {
                 if (string.IsNullOrWhiteSpace(text))
                 {
+                    System.Diagnostics.Debug.WriteLine("ParseMedicalText: 入力テキストが空です");
                     return records;
                 }
 
@@ -93,28 +92,27 @@ namespace MediRecordConverter
                 MedicalRecord currentRecord = null;
                 string currentDate = "";
 
+                System.Diagnostics.Debug.WriteLine($"ParseMedicalText: {lines.Length}行のテキストを処理開始");
+
                 for (int i = 0; i < lines.Length; i++)
                 {
                     var line = lines[i].Trim();
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
 
-                    // 日付行の検出
-                    var dateMatch = ExtractDate(line);
-                    if (!string.IsNullOrEmpty(dateMatch))
-                    {
-                        currentDate = dateMatch;
-                        continue;
-                    }
+                    System.Diagnostics.Debug.WriteLine($"処理中の行[{i}]: {line}");
 
-                    // 医師記録行の検出
+                    // 【修正】医師記録行の検出を最優先で処理
                     var recordMatch = ExtractDoctorRecord(line);
                     if (recordMatch.HasValue)
                     {
+                        System.Diagnostics.Debug.WriteLine($"医師記録を検出: 科={recordMatch.Value.Department}, 時刻={recordMatch.Value.Time}");
+
                         // 前のレコードを保存
                         if (currentRecord != null)
                         {
                             records.Add(currentRecord);
+                            System.Diagnostics.Debug.WriteLine($"レコード追加: {currentRecord.timestamp} - {currentRecord.department}");
                         }
 
                         // 新しいレコードを開始
@@ -128,8 +126,19 @@ namespace MediRecordConverter
                             plan = "",
                             comment = "",
                             summary = "",
-                            currentSoapSection = "" // 修正：SOAPセクション追跡を初期化
+                            currentSoapSection = ""
                         };
+
+                        System.Diagnostics.Debug.WriteLine($"新しいレコード開始: {currentRecord.timestamp} - {currentRecord.department}");
+                        continue;
+                    }
+
+                    // 日付行の検出（医師記録でない場合のみ）
+                    var dateMatch = ExtractDate(line);
+                    if (!string.IsNullOrEmpty(dateMatch))
+                    {
+                        currentDate = dateMatch;
+                        System.Diagnostics.Debug.WriteLine($"日付を検出: {currentDate}");
                         continue;
                     }
 
@@ -138,13 +147,20 @@ namespace MediRecordConverter
                     {
                         ClassifySOAPContent(line, currentRecord);
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"警告: 医師記録なしでSOAP行を検出: {line}");
+                    }
                 }
 
                 // 最後のレコードを追加
                 if (currentRecord != null)
                 {
                     records.Add(currentRecord);
+                    System.Diagnostics.Debug.WriteLine($"最後のレコード追加: {currentRecord.timestamp} - {currentRecord.department}");
                 }
+
+                System.Diagnostics.Debug.WriteLine($"解析完了: {records.Count}個のレコードを作成");
 
                 // 空のフィールドを持つレコードをクリーンアップ
                 records = CleanupRecords(records);
@@ -154,19 +170,364 @@ namespace MediRecordConverter
 
                 // 日付時刻順にソート（古い順）
                 records = SortRecordsByDateTime(records);
+
+                System.Diagnostics.Debug.WriteLine($"最終結果: {records.Count}個のレコード");
             }
             catch (Exception ex)
             {
-                // デバッグ用：エラーログを出力
                 System.Diagnostics.Debug.WriteLine($"ParseMedicalText Error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
             }
 
             return records;
         }
 
         /// <summary>
-        /// 同じ時刻とdepartmentのレコードをマージ
+        /// 日付を抽出（医師記録行を除外）
         /// </summary>
+        private string ExtractDate(string line)
+        {
+            // 【修正】医師記録行でないことを確認してから日付を抽出
+            if (IsDoctorRecordLine(line))
+            {
+                System.Diagnostics.Debug.WriteLine($"医師記録行のため日付抽出をスキップ: {line}");
+                return null;
+            }
+
+            // より柔軟な日付パターン（曜日も含む）
+            var datePatterns = new string[]
+            {
+                @"^(\d{4}/\d{1,2}/\d{1,2})\([月火水木金土日]\)$",  // 行全体が日付(曜日)
+                @"^(\d{4}/\d{1,2}/\d{1,2})$",                      // 行全体が日付
+            };
+
+            foreach (var pattern in datePatterns)
+            {
+                var match = Regex.Match(line, pattern);
+                if (match.Success)
+                {
+                    try
+                    {
+                        var dateStr = match.Groups[1].Value;
+                        var dateParts = dateStr.Split('/');
+                        var year = int.Parse(dateParts[0]);
+                        var month = int.Parse(dateParts[1]);
+                        var day = int.Parse(dateParts[2]);
+
+                        var result = new DateTime(year, month, day).ToString("yyyy-MM-ddT");
+                        System.Diagnostics.Debug.WriteLine($"日付抽出成功: {line} → {result}");
+                        return result;
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"日付パース失敗: {line} - {ex.Message}");
+                        return null;
+                    }
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"日付パターンマッチなし: {line}");
+            return null;
+        }
+
+        /// <summary>
+        /// 医師記録行かどうかを判定
+        /// </summary>
+        private bool IsDoctorRecordLine(string line)
+        {
+            var patterns = new string[]
+            {
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?\d{1,2}:\d{2}"
+            };
+
+            foreach (var pattern in patterns)
+            {
+                if (Regex.IsMatch(line, pattern))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 医師記録行を抽出
+        /// </summary>
+        private (string Department, string Time)? ExtractDoctorRecord(string line)
+        {
+            // より具体的な正規表現パターン
+            var patterns = new string[]
+            {
+           
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?[\s　]+(\d{1,2}:\d{2})[\s　]*\(最終更新.*?\)【救急】",
+               
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?[\s　]+(\d{1,2}:\d{2})[\s　]*\(最終更新.*?\)(?!【救急】)",  
+                
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?[\s　]+(\d{1,2}:\d{2})(?:\s|$)",
+                
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科).*?(\d{1,2}:\d{2})"
+            };
+
+            for (int i = 0; i < patterns.Length; i++)
+            {
+                var pattern = patterns[i];
+                try
+                {
+                    var match = Regex.Match(line, pattern);
+                    if (match.Success)
+                    {
+                        var department = match.Groups[1].Value;
+                        var time = match.Groups[2].Value;
+                        System.Diagnostics.Debug.WriteLine($"医師記録抽出成功(パターン{i}): {line} → 科={department}, 時刻={time}");
+                        return (department, time);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"正規表現エラー(パターン{i}): {ex.Message}");
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"医師記録パターンマッチなし: {line}");
+            return null;
+        }
+
+        /// <summary>
+        /// 日付と時刻を結合してISO形式のタイムスタンプを作成
+        /// </summary>
+        private string CombineDateAndTime(string date, string time)
+        {
+            if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(time))
+            {
+                System.Diagnostics.Debug.WriteLine($"タイムスタンプ作成失敗: date={date}, time={time}");
+                return "";
+            }
+
+            try
+            {
+                var timeParts = time.Split(':');
+                var hour = int.Parse(timeParts[0]);
+                var minute = int.Parse(timeParts[1]);
+
+                var result = $"{date}{hour:D2}:{minute:D2}:00Z";
+                System.Diagnostics.Debug.WriteLine($"タイムスタンプ作成成功: {date} + {time} → {result}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タイムスタンプ作成エラー: {ex.Message}");
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// SOAPコンテンツを分類（デバッグ機能付き修正版）
+        /// </summary>
+        private void ClassifySOAPContent(string line, MedicalRecord record)
+        {
+            var trimmedLine = line.Trim();
+
+            // SOAPマッピング
+            var soapMapping = new Dictionary<string, string>
+            {
+                { "S", "subject" },
+                { "O", "object" },
+                { "A", "assessment" },
+                { "P", "plan" },
+                { "F", "comment" },
+                { "サ", "summary" }
+            };
+
+            // SOAP項目の検出と分類
+            bool foundSoapPattern = false;
+            foreach (var mapping in soapMapping)
+            {
+                var patterns = new string[]
+                {
+                    $"{mapping.Key} >",
+                    $"{mapping.Key}>",
+                    $"{mapping.Key} ＞",
+                    $"{mapping.Key}＞",
+                    $"{mapping.Key} ",
+                    $"{mapping.Key}　"
+                };
+
+                foreach (var pattern in patterns)
+                {
+                    if (trimmedLine.StartsWith(pattern))
+                    {
+                        record.currentSoapSection = mapping.Value;
+                        foundSoapPattern = true;
+
+                        var content = "";
+                        if (trimmedLine.Length > pattern.Length)
+                        {
+                            content = trimmedLine.Substring(pattern.Length).Trim();
+                        }
+
+                        System.Diagnostics.Debug.WriteLine($"SOAPセクション検出: {mapping.Key} → {mapping.Value}, 内容: {content}");
+
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            SetFieldByMapping(record, mapping.Value, content);
+                        }
+                        return;
+                    }
+                }
+            }
+
+            // 継続行の処理
+            if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
+            {
+                System.Diagnostics.Debug.WriteLine($"継続行として処理: {trimmedLine} (現在のセクション: {record.currentSoapSection})");
+                AddContinuationLine(record, trimmedLine);
+            }
+        }
+
+        /// <summary>
+        /// マッピングに基づいてフィールドを設定
+        /// </summary>
+        private void SetFieldByMapping(MedicalRecord record, string fieldName, string content)
+        {
+            switch (fieldName)
+            {
+                case "subject":
+                    record.subject = AppendContent(record.subject, content);
+                    break;
+                case "object":
+                    record.objectData = AppendContent(record.objectData, content);
+                    break;
+                case "assessment":
+                    record.assessment = AppendContent(record.assessment, content);
+                    break;
+                case "plan":
+                    record.plan = AppendContent(record.plan, content);
+                    break;
+                case "comment":
+                    record.comment = AppendContent(record.comment, content);
+                    break;
+                case "summary":
+                    record.summary = AppendContent(record.summary, content);
+                    break;
+            }
+            System.Diagnostics.Debug.WriteLine($"フィールド設定: {fieldName} = {content}");
+        }
+
+        /// <summary>
+        /// 継続行を現在のSOAPセクションに追加（修正版）
+        /// </summary>
+        private void AddContinuationLine(MedicalRecord record, string content)
+        {
+            switch (record.currentSoapSection)
+            {
+                case "subject":
+                    record.subject = AppendContent(record.subject, content);
+                    break;
+                case "object":
+                    record.objectData = AppendContent(record.objectData, content);
+                    break;
+                case "assessment":
+                    record.assessment = AppendContent(record.assessment, content);
+                    break;
+                case "plan":
+                    record.plan = AppendContent(record.plan, content);
+                    break;
+                case "comment":
+                    record.comment = AppendContent(record.comment, content);
+                    break;
+                case "summary":
+                    record.summary = AppendContent(record.summary, content);
+                    break;
+                default:
+                    // インテリジェントに分類
+                    if (IsObjectiveContent(content))
+                    {
+                        record.objectData = AppendContent(record.objectData, content);
+                        record.currentSoapSection = "object";
+                    }
+                    else if (IsAssessmentContent(content))
+                    {
+                        record.assessment = AppendContent(record.assessment, content);
+                        record.currentSoapSection = "assessment";
+                    }
+                    else if (IsPlanContent(content))
+                    {
+                        record.plan = AppendContent(record.plan, content);
+                        record.currentSoapSection = "plan";
+                    }
+                    else
+                    {
+                        record.subject = AppendContent(record.subject, content);
+                        record.currentSoapSection = "subject";
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 客観的所見内容かどうかを判定
+        /// </summary>
+        private bool IsObjectiveContent(string content)
+        {
+            var objectiveKeywords = new string[]
+            {
+                "結膜", "角膜", "前房", "水晶体", "乳頭", "網膜", "眼圧", "視力",
+                "血圧", "体温", "脈拍", "呼吸", "血液検査", "検査結果", "画像", "所見",
+                "slit", "cor", "ac", "lens", "disc", "fds", "AVG", "mmHg"
+            };
+
+            return objectiveKeywords.Any(keyword => content.Contains(keyword));
+        }
+
+        /// <summary>
+        /// 評価内容かどうかを判定
+        /// </summary>
+        private bool IsAssessmentContent(string content)
+        {
+            var assessmentKeywords = new string[]
+            {
+                "＃", "#", "診断", "評価", "慢性", "症", "病", "疾患", "状態", "不全",
+                "出血", "結膜下出血", "白内障", "緑内障", "進行", "影響"
+            };
+
+            return assessmentKeywords.Any(keyword => content.Contains(keyword));
+        }
+
+        /// <summary>
+        /// 計画内容かどうかを判定
+        /// </summary>
+        private bool IsPlanContent(string content)
+        {
+            var planKeywords = new string[]
+            {
+                "治療", "処方", "継続", "指導", "制限", "予定", "検討", "再開",
+                "維持", "採血", "注射", "薬", "mg", "錠", "単位", "再診",
+                "medi", "終了", "指示", "週間後", "視力", "眼圧"
+            };
+
+            return planKeywords.Any(keyword => content.Contains(keyword));
+        }
+
+        /// <summary>
+        /// ヘッダー行かどうかを判定（改善版）
+        /// </summary>
+        private bool IsHeaderLine(string line)
+        {
+            // 日付行の判定
+            if (Regex.IsMatch(line, @"^\d{4}/\d{1,2}/\d{1,2}"))
+                return true;
+
+            // 医師記録行の判定
+            if (IsDoctorRecordLine(line))
+                return true;
+
+            // その他のヘッダー情報
+            if (line.Contains("【救急】") || line.Contains("最終更新"))
+                return true;
+
+            return false;
+        }
+
+        // 残りのメソッドは元のままでOK
         private List<MedicalRecord> MergeRecordsByTimestamp(List<MedicalRecord> records)
         {
             var mergedRecords = new List<MedicalRecord>();
@@ -180,7 +541,6 @@ namespace MediRecordConverter
                 }
                 else
                 {
-                    // 複数のレコードを統合
                     var mergedRecord = new MedicalRecord
                     {
                         timestamp = group.Key.timestamp,
@@ -216,9 +576,6 @@ namespace MediRecordConverter
             return mergedRecords;
         }
 
-        /// <summary>
-        /// レコードを日付時刻順（古い順）にソート
-        /// </summary>
         private List<MedicalRecord> SortRecordsByDateTime(List<MedicalRecord> records)
         {
             return records.OrderBy(record =>
@@ -227,276 +584,10 @@ namespace MediRecordConverter
                 {
                     return parsedDate;
                 }
-                return DateTime.MinValue; // パースできない場合は最も古い日付として扱う
+                return DateTime.MinValue;
             }).ToList();
         }
 
-        /// <summary>
-        /// 日付を抽出
-        /// </summary>
-        private string ExtractDate(string line)
-        {
-            // 修正: より柔軟な日付パターンに変更
-            var datePattern = @"(\d{4}/\d{1,2}/\d{1,2})";
-            var match = Regex.Match(line, datePattern);
-            if (match.Success)
-            {
-                try
-                {
-                    var dateStr = match.Groups[1].Value;
-                    var dateParts = dateStr.Split('/');
-                    var year = int.Parse(dateParts[0]);
-                    var month = int.Parse(dateParts[1]);
-                    var day = int.Parse(dateParts[2]);
-
-                    return new DateTime(year, month, day).ToString("yyyy-MM-ddT");
-                }
-                catch
-                {
-                    return null;
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 医師記録行を抽出
-        /// </summary>
-        private (string Department, string Time)? ExtractDoctorRecord(string line)
-        {
-            // 修正: より柔軟な正規表現パターンに変更
-            var pattern = @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?(\d{1,2}:\d{2})";
-            var match = Regex.Match(line, pattern);
-
-            if (match.Success)
-            {
-                return (match.Groups[1].Value, match.Groups[2].Value);
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// 日付と時刻を結合してISO形式のタイムスタンプを作成
-        /// </summary>
-        private string CombineDateAndTime(string date, string time)
-        {
-            if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(time))
-                return "";
-
-            try
-            {
-                var timeParts = time.Split(':');
-                var hour = int.Parse(timeParts[0]);
-                var minute = int.Parse(timeParts[1]);
-
-                return $"{date}{hour:D2}:{minute:D2}:00Z";
-            }
-            catch
-            {
-                return "";
-            }
-        }
-
-        /// <summary>
-        /// SOAPコンテンツを分類（修正版）
-        /// </summary>
-        private void ClassifySOAPContent(string line, MedicalRecord record)
-        {
-            var trimmedLine = line.Trim();
-
-            // 修正：SOAPマッピング
-            var soapMapping = new Dictionary<string, string>
-            {
-                { "S", "subject" },
-                { "O", "object" },
-                { "A", "assessment" },
-                { "P", "plan" },
-                { "F", "comment" },
-                { "サ", "summary" }
-            };
-
-            // 修正：SOAP項目の検出と分類を改善
-            bool foundSoapPattern = false;
-            foreach (var mapping in soapMapping)
-            {
-                var patterns = new string[]
-                {
-                    $"{mapping.Key} >",
-                    $"{mapping.Key}>",
-                    $"{mapping.Key} ＞",
-                    $"{mapping.Key}＞",
-                    $"{mapping.Key} ",
-                    $"{mapping.Key}　"
-                };
-
-                foreach (var pattern in patterns)
-                {
-                    if (trimmedLine.StartsWith(pattern))
-                    {
-                        // 修正：現在のSOAPセクションを更新
-                        record.currentSoapSection = mapping.Value;
-                        foundSoapPattern = true;
-
-                        var content = "";
-                        if (trimmedLine.Length > pattern.Length)
-                        {
-                            content = trimmedLine.Substring(pattern.Length).Trim();
-                        }
-
-                        if (!string.IsNullOrEmpty(content))
-                        {
-                            SetFieldByMapping(record, mapping.Value, content);
-                        }
-                        return;
-                    }
-                }
-            }
-
-            // 修正：継続行の処理を改善
-            if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
-            {
-                // 現在のSOAPセクションに継続行を追加
-                AddContinuationLine(record, trimmedLine);
-            }
-        }
-
-        /// <summary>
-        /// マッピングに基づいてフィールドを設定
-        /// </summary>
-        private void SetFieldByMapping(MedicalRecord record, string fieldName, string content)
-        {
-            switch (fieldName)
-            {
-                case "subject":
-                    record.subject = AppendContent(record.subject, content);
-                    break;
-                case "object":
-                    record.objectData = AppendContent(record.objectData, content);
-                    break;
-                case "assessment":
-                    record.assessment = AppendContent(record.assessment, content);
-                    break;
-                case "plan":
-                    record.plan = AppendContent(record.plan, content);
-                    break;
-                case "comment":
-                    record.comment = AppendContent(record.comment, content);
-                    break;
-                case "summary":
-                    record.summary = AppendContent(record.summary, content);
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 継続行を現在のSOAPセクションに追加（修正版）
-        /// </summary>
-        private void AddContinuationLine(MedicalRecord record, string content)
-        {
-            // 修正：現在のSOAPセクションに基づいて追加
-            switch (record.currentSoapSection)
-            {
-                case "subject":
-                    record.subject = AppendContent(record.subject, content);
-                    break;
-                case "object":
-                    record.objectData = AppendContent(record.objectData, content);
-                    break;
-                case "assessment":
-                    record.assessment = AppendContent(record.assessment, content);
-                    break;
-                case "plan":
-                    record.plan = AppendContent(record.plan, content);
-                    break;
-                case "comment":
-                    record.comment = AppendContent(record.comment, content);
-                    break;
-                case "summary":
-                    record.summary = AppendContent(record.summary, content);
-                    break;
-                default:
-                    // 修正：SOAPセクションが特定されていない場合は、内容に応じてインテリジェントに分類
-                    if (IsObjectiveContent(content))
-                    {
-                        record.objectData = AppendContent(record.objectData, content);
-                        record.currentSoapSection = "object";
-                    }
-                    else if (IsAssessmentContent(content))
-                    {
-                        record.assessment = AppendContent(record.assessment, content);
-                        record.currentSoapSection = "assessment";
-                    }
-                    else if (IsPlanContent(content))
-                    {
-                        record.plan = AppendContent(record.plan, content);
-                        record.currentSoapSection = "plan";
-                    }
-                    else
-                    {
-                        // デフォルトでsubjectに追加
-                        record.subject = AppendContent(record.subject, content);
-                        record.currentSoapSection = "subject";
-                    }
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 修正：客観的所見内容かどうかを判定
-        /// </summary>
-        private bool IsObjectiveContent(string content)
-        {
-            var objectiveKeywords = new string[]
-            {
-                "他覚所見", "透析記録", "尿量", "血圧", "体温", "脈拍", "呼吸", "血液検査",
-                "検査結果", "画像", "所見", "観察", "測定", "経口摂取", "血糖値"
-            };
-
-            return objectiveKeywords.Any(keyword => content.Contains(keyword));
-        }
-
-        /// <summary>
-        /// 修正：評価内容かどうかを判定
-        /// </summary>
-        private bool IsAssessmentContent(string content)
-        {
-            var assessmentKeywords = new string[]
-            {
-                "＃", "#", "診断", "評価", "慢性", "症", "病", "疾患", "状態", "不全",
-                "糖尿病", "高血圧", "腎症", "心不全", "切断", "貧血"
-            };
-
-            return assessmentKeywords.Any(keyword => content.Contains(keyword));
-        }
-
-        /// <summary>
-        /// 修正：計画内容かどうかを判定
-        /// </summary>
-        private bool IsPlanContent(string content)
-        {
-            var planKeywords = new string[]
-            {
-                "透析", "治療", "処方", "継続", "指導", "制限", "予定", "検討", "再開",
-                "維持", "採血", "注射", "薬", "インスリン", "フロセミド", "mg", "錠", "単位"
-            };
-
-            return planKeywords.Any(keyword => content.Contains(keyword));
-        }
-
-        /// <summary>
-        /// ヘッダー行かどうかを判定
-        /// </summary>
-        private bool IsHeaderLine(string line)
-        {
-            // 日付行、医師記録行、その他のヘッダーを除外
-            return Regex.IsMatch(line, @"\d{4}/\d{1,2}/\d{1,2}") ||
-                   Regex.IsMatch(line, @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)");
-        }
-
-        /// <summary>
-        /// コンテンツを改行で結合
-        /// </summary>
         private string AppendContent(string existing, string newContent)
         {
             if (string.IsNullOrEmpty(existing))
@@ -508,19 +599,14 @@ namespace MediRecordConverter
             return existing + "\n" + newContent;
         }
 
-        /// <summary>
-        /// 空のフィールドを持つレコードをクリーンアップ
-        /// </summary>
         private List<MedicalRecord> CleanupRecords(List<MedicalRecord> records)
         {
             var cleanedRecords = new List<MedicalRecord>();
 
             foreach (var record in records)
             {
-                // 修正: タイムスタンプと部署名があれば有効なレコードとして扱う
                 if (!string.IsNullOrEmpty(record.timestamp) && !string.IsNullOrEmpty(record.department))
                 {
-                    // nullフィールドを空文字に変換
                     var cleanRecord = new MedicalRecord
                     {
                         timestamp = record.timestamp ?? "",
