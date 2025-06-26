@@ -66,6 +66,7 @@ namespace MediRecordConverter
 
                 if (position.StartsWith("right"))
                 {
+                    // "right+x+y"形式の処理
                     var coords = position.Replace("right", "").Trim();
                     var parts = coords.Split('+');
 
@@ -77,6 +78,33 @@ namespace MediRecordConverter
                         var screenWidth = Screen.PrimaryScreen.WorkingArea.Width;
                         var x = screenWidth - windowWidth - xOffset;
                         var y = yOffset;
+
+                        return new Point(x, y);
+                    }
+                }
+                else if (position.StartsWith("+"))
+                {
+                    // "+x+y"形式の処理を追加
+                    var parts = position.Split('+');
+
+                    if (parts.Length >= 3)
+                    {
+                        // parts[0]は空文字列、parts[1]がx座標、parts[2]がy座標
+                        var x = int.Parse(parts[1]);
+                        var y = int.Parse(parts[2]);
+
+                        return new Point(x, y);
+                    }
+                }
+                else
+                {
+                    // その他の形式（例：数字のみ、カンマ区切りなど）の処理を追加
+                    var parts = position.Split(new char[] { '+', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length >= 2)
+                    {
+                        var x = int.Parse(parts[0]);
+                        var y = int.Parse(parts[1]);
 
                         return new Point(x, y);
                     }
