@@ -22,6 +22,7 @@ namespace MediRecordConverter
         private TextBox textOutput;
         private Label statsLabel;
         private Label monitorStatusLabel;
+        private Button soapCopyButton;
 
         public MainForm()
         {
@@ -108,10 +109,10 @@ namespace MediRecordConverter
             buttonPanel.WrapContents = true;
             buttonPanel.Padding = new Padding(10);
 
-            // ボタン作成（統計表示ボタンを削除）
+            // ボタン作成
             Button newButton = CreateButton("新規登録", StartMonitoring);
             Button soapButton = CreateButton("詳細検索設定", RunMouseAutomation);
-            Button soapCopyButton = CreateButton("カルテコピー", SoapCopy);
+            soapCopyButton = CreateButton("カルテコピー", SoapCopy); // フィールドに保存
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
             Button clearButton = CreateButton("テキストクリア", ClearText);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
@@ -298,9 +299,34 @@ namespace MediRecordConverter
             finally
             {
                 this.WindowState = FormWindowState.Normal;
+
+                // フォームが復元されてからマウスカーソルを戻す
+                this.BeginInvoke((Action)(() =>
+                {
+                    System.Threading.Thread.Sleep(100); // 少し待機
+
+                    if (soapCopyButton != null && soapCopyButton.Visible)
+                    {
+                        try
+                        {
+                            // ボタンの画面座標を正しく取得
+                            var screenPoint = soapCopyButton.PointToScreen(new Point(
+                                soapCopyButton.Width / 2,
+                                soapCopyButton.Height / 2
+                            ));
+
+                            Cursor.Position = screenPoint;
+                            System.Diagnostics.Debug.WriteLine($"マウスカーソル移動: ({screenPoint.X}, {screenPoint.Y})");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"マウスカーソル移動エラー: {ex.Message}");
+                        }
+                    }
+                }));
             }
         }
-        
+
         private void ShowAutoCloseMessage(string message)
         {
             Form popup = new Form();
