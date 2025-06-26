@@ -172,7 +172,6 @@ namespace MediRecordConverter
                                 textInput.Text = clipboardText;
                             }
 
-                            ShowNotification("コピーしました");
                         }
                         isFirstCheck = false;
                     }
