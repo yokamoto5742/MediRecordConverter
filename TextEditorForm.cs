@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 
 namespace MediRecordConverter
 {
@@ -9,6 +10,8 @@ namespace MediRecordConverter
         private TextBox textEditor;
         private Button closeButton;
         private Button saveButton;
+        private Button pasteButton;  // 【修正1】貼り付けボタンを追加
+        private Button clearButton;  // 【修正2】クリアボタンを追加
         private string initialText;
         private ConfigManager config;
 
@@ -25,9 +28,9 @@ namespace MediRecordConverter
 
             // フォームの基本設定
             this.Text = "確認画面";
-            this.Size = new Size(config.EditorWidth, config.EditorHeight);  // 設定値を使用
+            this.Size = new Size(config.EditorWidth, config.EditorHeight);
             this.StartPosition = FormStartPosition.CenterParent;
-            this.MinimumSize = new Size(400, 300);
+            this.MinimumSize = new Size(400, 400);
 
             // メインレイアウト
             TableLayoutPanel mainLayout = new TableLayoutPanel();
@@ -65,8 +68,24 @@ namespace MediRecordConverter
             saveButton.Margin = new Padding(5);
             saveButton.Click += SaveButton_Click;
 
+            // 【修正3】貼り付けボタンの作成
+            pasteButton = new Button();
+            pasteButton.Text = "貼り付け";
+            pasteButton.Size = new Size(100, 30);
+            pasteButton.Margin = new Padding(5);
+            pasteButton.Click += PasteButton_Click;
+
+            // 【修正4】クリアボタンの作成
+            clearButton = new Button();
+            clearButton.Text = "クリア";
+            clearButton.Size = new Size(100, 30);
+            clearButton.Margin = new Padding(5);
+            clearButton.Click += ClearButton_Click;
+
             buttonPanel.Controls.Add(closeButton);
             buttonPanel.Controls.Add(saveButton);
+            buttonPanel.Controls.Add(clearButton);   // 3番目に追加
+            buttonPanel.Controls.Add(pasteButton);   // 4番目に追加
 
             // レイアウトに追加
             mainLayout.Controls.Add(textEditor, 0, 0);
@@ -76,17 +95,81 @@ namespace MediRecordConverter
             this.ResumeLayout(false);
         }
 
+        // 【修正6】保存ボタンの機能を拡張
         private void SaveButton_Click(object sender, EventArgs e)
         {
-            // 簡単な保存処理（実際の要件に応じて実装）
             try
             {
-                MessageBox.Show("テキストが保存されました。", "保存完了",
+                // ダウンロードフォルダーのパスを取得
+                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+                // ファイル名を生成（日付時刻付き）
+                string fileName = $"確認画面_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+                string filePath = Path.Combine(downloadsPath, fileName);
+
+                // テキストファイルに保存
+                File.WriteAllText(filePath, textEditor.Text, System.Text.Encoding.UTF8);
+
+                MessageBox.Show($"テキストが保存されました。\nファイル: {fileName}", "保存完了",
                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // ダウンロードフォルダーを開く
+                System.Diagnostics.Process.Start("explorer.exe", downloadsPath);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"保存中にエラーが発生しました: {ex.Message}", "エラー",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 【修正7】貼り付けボタンのイベントハンドラーを追加
+        private void PasteButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (Clipboard.ContainsText())
+                {
+                    string clipboardText = Clipboard.GetText();
+                    if (!string.IsNullOrEmpty(clipboardText))
+                    {
+                        // カーソル位置にテキストを挿入
+                        int selectionStart = textEditor.SelectionStart;
+                        textEditor.Text = textEditor.Text.Insert(selectionStart, clipboardText);
+                        textEditor.SelectionStart = selectionStart + clipboardText.Length;
+                        textEditor.Focus();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("クリップボードにテキストがありません。", "情報",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"貼り付け中にエラーが発生しました: {ex.Message}", "エラー",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 【修正8】クリアボタンのイベントハンドラーを追加
+        private void ClearButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                DialogResult result = MessageBox.Show("テキストをクリアしますか？", "確認",
+                                                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    textEditor.Clear();
+                    textEditor.Focus();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリア中にエラーが発生しました: {ex.Message}", "エラー",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
