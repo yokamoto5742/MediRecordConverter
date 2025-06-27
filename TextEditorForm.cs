@@ -22,6 +22,87 @@ namespace MediRecordConverter
             InitializeComponent();
         }
 
+        // 【修正】エディターウィンドウの初期位置を取得するメソッドを追加
+        private Point GetEditorWindowPosition()
+        {
+            try
+            {
+                var position = config.EditorWindowPosition.ToLower();
+
+                if (position.StartsWith("right"))
+                {
+                    // "right+x+y"形式の処理
+                    var coords = position.Replace("right", "").Trim();
+                    var parts = coords.Split('+');
+
+                    if (parts.Length >= 3)
+                    {
+                        var xOffset = int.Parse(parts[1]);
+                        var yOffset = int.Parse(parts[2]);
+
+                        var screenWidth = Screen.PrimaryScreen.WorkingArea.Width;
+                        var x = screenWidth - config.EditorWidth - xOffset;
+                        var y = yOffset;
+
+                        return new Point(x, y);
+                    }
+                }
+                else if (position.StartsWith("+"))
+                {
+                    // "+x+y"形式の処理
+                    var parts = position.Split('+');
+
+                    if (parts.Length >= 3)
+                    {
+                        // parts[0]は空文字列、parts[1]がx座標、parts[2]がy座標
+                        var x = int.Parse(parts[1]);
+                        var y = int.Parse(parts[2]);
+
+                        return new Point(x, y);
+                    }
+                }
+                else
+                {
+                    // その他の形式（例：数字のみ、カンマ区切りなど）の処理
+                    var parts = position.Split(new char[] { '+', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length >= 2)
+                    {
+                        var x = int.Parse(parts[0]);
+                        var y = int.Parse(parts[1]);
+
+                        return new Point(x, y);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"エディター位置設定解析エラー: {ex.Message}");
+            }
+
+            // デフォルト位置（画面中央）
+            var screenBounds = Screen.PrimaryScreen.WorkingArea;
+            var centerX = (screenBounds.Width - config.EditorWidth) / 2;
+            var centerY = (screenBounds.Height - config.EditorHeight) / 2;
+            return new Point(centerX, centerY);
+        }
+
+        // 【追加】フォームのアイコンを設定するメソッド
+        private void SetFormIcon()
+        {
+            try
+            {
+                // 実行ファイルのアイコンを使用
+                this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                System.Diagnostics.Debug.WriteLine("エディターフォームのアイコンを設定しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"アイコン設定エラー: {ex.Message}");
+                // アイコン設定に失敗した場合はデフォルトアイコンのまま
+            }
+        }
+
         private void InitializeComponent()
         {
             this.SuspendLayout();
@@ -29,8 +110,12 @@ namespace MediRecordConverter
             // フォームの基本設定
             this.Text = "確認画面";
             this.Size = new Size(config.EditorWidth, config.EditorHeight);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.MinimumSize = new Size(400, 400);
+            this.StartPosition = FormStartPosition.Manual;  // 【修正】ManualでConfigの位置を使用
+            this.Location = GetEditorWindowPosition();      // 【修正】Configから位置を取得
+            this.MinimumSize = new Size(400, 300);
+
+            // 【追加】アイコンの設定
+            SetFormIcon();
 
             // メインレイアウト
             TableLayoutPanel mainLayout = new TableLayoutPanel();
@@ -82,10 +167,11 @@ namespace MediRecordConverter
             clearButton.Margin = new Padding(5);
             clearButton.Click += ClearButton_Click;
 
+            // 【修正5】ボタンパネルにボタンを追加（左から：貼り付け、クリア、保存、閉じる）
             buttonPanel.Controls.Add(closeButton);
             buttonPanel.Controls.Add(saveButton);
-            buttonPanel.Controls.Add(clearButton);   // 3番目に追加
-            buttonPanel.Controls.Add(pasteButton);   // 4番目に追加
+            buttonPanel.Controls.Add(clearButton);
+            buttonPanel.Controls.Add(pasteButton);
 
             // レイアウトに追加
             mainLayout.Controls.Add(textEditor, 0, 0);
