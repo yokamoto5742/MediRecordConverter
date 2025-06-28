@@ -24,7 +24,7 @@ namespace MediRecordConverter
                 { "A", "assessment" },
                 { "P", "plan" },
                 { "F", "comment" },
-                { "サ", "summary" }
+                { "ｻ", "summary" }
             };
 
             bool foundSoapPattern = false;

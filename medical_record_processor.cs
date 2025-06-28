@@ -4,16 +4,8 @@ using System.Linq;
 
 namespace MediRecordConverter
 {
-    /// <summary>
-    /// 医療記録の後処理（マージ、ソート、クリーンアップ）を担当するクラス
-    /// </summary>
     public class MedicalRecordProcessor
     {
-        /// <summary>
-        /// 空のフィールドを持つレコードをクリーンアップします
-        /// </summary>
-        /// <param name="records">処理対象のレコードリスト</param>
-        /// <returns>クリーンアップされたレコードリスト</returns>
         public List<MedicalRecord> CleanupRecords(List<MedicalRecord> records)
         {
             var cleanedRecords = new List<MedicalRecord>();
@@ -41,11 +33,6 @@ namespace MediRecordConverter
             return cleanedRecords;
         }
 
-        /// <summary>
-        /// 同じタイムスタンプのレコードをマージします
-        /// </summary>
-        /// <param name="records">処理対象のレコードリスト</param>
-        /// <returns>マージされたレコードリスト</returns>
         public List<MedicalRecord> MergeRecordsByTimestamp(List<MedicalRecord> records)
         {
             var mergedRecords = new List<MedicalRecord>();
@@ -94,11 +81,6 @@ namespace MediRecordConverter
             return mergedRecords;
         }
 
-        /// <summary>
-        /// レコードを日時順にソートします
-        /// </summary>
-        /// <param name="records">処理対象のレコードリスト</param>
-        /// <returns>ソートされたレコードリスト</returns>
         public List<MedicalRecord> SortRecordsByDateTime(List<MedicalRecord> records)
         {
             return records.OrderBy(record =>
@@ -111,12 +93,6 @@ namespace MediRecordConverter
             }).ToList();
         }
 
-        /// <summary>
-        /// 既存の内容に新しい内容を追加します
-        /// </summary>
-        /// <param name="existing">既存の内容</param>
-        /// <param name="newContent">新しい内容</param>
-        /// <returns>結合された内容</returns>
         private string AppendContent(string existing, string newContent)
         {
             if (string.IsNullOrEmpty(existing))
