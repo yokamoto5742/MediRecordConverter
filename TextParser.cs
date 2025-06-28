@@ -452,7 +452,6 @@ namespace MediRecordConverter
 
             return assessmentKeywords.Any(keyword => content.Contains(keyword));
         }
->
         private bool IsPlanContent(string content)
         {
             var planKeywords = new string[]
@@ -481,7 +480,6 @@ namespace MediRecordConverter
 
             return false;
         }
-
         private List<MedicalRecord> MergeRecordsByTimestamp(List<MedicalRecord> records)
         {
             var mergedRecords = new List<MedicalRecord>();
