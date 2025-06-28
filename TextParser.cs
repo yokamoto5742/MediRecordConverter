@@ -8,7 +8,6 @@ namespace MediRecordConverter
 {
     public class TextParser
     {
-        // 医療記録用のクラス
         public class MedicalRecord
         {
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -73,9 +72,6 @@ namespace MediRecordConverter
         {
         }
 
-        /// <summary>
-        /// 医療テキストを解析してJSONデータに変換（処理順序修正版）
-        /// </summary>
         public List<MedicalRecord> ParseMedicalText(string text)
         {
             var records = new List<MedicalRecord>();
@@ -102,7 +98,6 @@ namespace MediRecordConverter
 
                     System.Diagnostics.Debug.WriteLine($"処理中の行[{i}]: {line}");
 
-                    // 【修正】医師記録行の検出を最優先で処理
                     var recordMatch = ExtractDoctorRecord(line);
                     if (recordMatch.HasValue)
                     {
@@ -133,7 +128,6 @@ namespace MediRecordConverter
                         continue;
                     }
 
-                    // 日付行の検出（医師記録でない場合のみ）
                     var dateMatch = ExtractDate(line);
                     if (!string.IsNullOrEmpty(dateMatch))
                     {
@@ -142,7 +136,6 @@ namespace MediRecordConverter
                         continue;
                     }
 
-                    // SOAP記録の検出と分類
                     if (currentRecord != null)
                     {
                         ClassifySOAPContent(line, currentRecord);
@@ -182,19 +175,14 @@ namespace MediRecordConverter
             return records;
         }
 
-        /// <summary>
-        /// 日付を抽出（医師記録行を除外）
-        /// </summary>
         private string ExtractDate(string line)
         {
-            // 【修正】医師記録行でないことを確認してから日付を抽出
             if (IsDoctorRecordLine(line))
             {
                 System.Diagnostics.Debug.WriteLine($"医師記録行のため日付抽出をスキップ: {line}");
                 return null;
             }
 
-            // より柔軟な日付パターン（曜日も含む）
             var datePatterns = new string[]
             {
                 @"^(\d{4}/\d{1,2}/\d{1,2})\([月火水木金土日]\)$",  // 行全体が日付(曜日)
@@ -230,14 +218,11 @@ namespace MediRecordConverter
             return null;
         }
 
-        /// <summary>
-        /// 医師記録行かどうかを判定
-        /// </summary>
         private bool IsDoctorRecordLine(string line)
         {
             var patterns = new string[]
             {
-                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻科|泌尿器科|婦人科|小児科|精神科|放射線科|麻酔科|病理科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?\d{1,2}:\d{2}"
+                @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻咽喉科|泌尿器科|小児科|精神科|放射線科|麻酔科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?\d{1,2}:\d{2}"
             };
 
             foreach (var pattern in patterns)
@@ -249,9 +234,6 @@ namespace MediRecordConverter
             return false;
         }
 
-        /// <summary>
-        /// 医師記録行を抽出
-        /// </summary>
         private (string Department, string Time)? ExtractDoctorRecord(string line)
         {
             // より具体的な正規表現パターン
@@ -291,9 +273,6 @@ namespace MediRecordConverter
             return null;
         }
 
-        /// <summary>
-        /// 日付と時刻を結合してISO形式のタイムスタンプを作成
-        /// </summary>
         private string CombineDateAndTime(string date, string time)
         {
             if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(time))
@@ -319,14 +298,10 @@ namespace MediRecordConverter
             }
         }
 
-        /// <summary>
-        /// SOAPコンテンツを分類（デバッグ機能付き修正版）
-        /// </summary>
         private void ClassifySOAPContent(string line, MedicalRecord record)
         {
             var trimmedLine = line.Trim();
 
-            // SOAPマッピング
             var soapMapping = new Dictionary<string, string>
             {
                 { "S", "subject" },
@@ -337,7 +312,6 @@ namespace MediRecordConverter
                 { "サ", "summary" }
             };
 
-            // SOAP項目の検出と分類
             bool foundSoapPattern = false;
             foreach (var mapping in soapMapping)
             {
@@ -375,7 +349,6 @@ namespace MediRecordConverter
                 }
             }
 
-            // 継続行の処理
             if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
             {
                 System.Diagnostics.Debug.WriteLine($"継続行として処理: {trimmedLine} (現在のセクション: {record.currentSoapSection})");
@@ -383,9 +356,6 @@ namespace MediRecordConverter
             }
         }
 
-        /// <summary>
-        /// マッピングに基づいてフィールドを設定
-        /// </summary>
         private void SetFieldByMapping(MedicalRecord record, string fieldName, string content)
         {
             switch (fieldName)
@@ -412,9 +382,6 @@ namespace MediRecordConverter
             System.Diagnostics.Debug.WriteLine($"フィールド設定: {fieldName} = {content}");
         }
 
-        /// <summary>
-        /// 継続行を現在のSOAPセクションに追加（修正版）
-        /// </summary>
         private void AddContinuationLine(MedicalRecord record, string content)
         {
             switch (record.currentSoapSection)
@@ -463,9 +430,6 @@ namespace MediRecordConverter
             }
         }
 
-        /// <summary>
-        /// 客観的所見内容かどうかを判定
-        /// </summary>
         private bool IsObjectiveContent(string content)
         {
             var objectiveKeywords = new string[]
@@ -478,9 +442,6 @@ namespace MediRecordConverter
             return objectiveKeywords.Any(keyword => content.Contains(keyword));
         }
 
-        /// <summary>
-        /// 評価内容かどうかを判定
-        /// </summary>
         private bool IsAssessmentContent(string content)
         {
             var assessmentKeywords = new string[]
@@ -491,10 +452,7 @@ namespace MediRecordConverter
 
             return assessmentKeywords.Any(keyword => content.Contains(keyword));
         }
-
-        /// <summary>
-        /// 計画内容かどうかを判定
-        /// </summary>
+>
         private bool IsPlanContent(string content)
         {
             var planKeywords = new string[]
@@ -507,9 +465,6 @@ namespace MediRecordConverter
             return planKeywords.Any(keyword => content.Contains(keyword));
         }
 
-        /// <summary>
-        /// ヘッダー行かどうかを判定（改善版）
-        /// </summary>
         private bool IsHeaderLine(string line)
         {
             // 日付行の判定
@@ -527,7 +482,6 @@ namespace MediRecordConverter
             return false;
         }
 
-        // 残りのメソッドは元のままでOK
         private List<MedicalRecord> MergeRecordsByTimestamp(List<MedicalRecord> records)
         {
             var mergedRecords = new List<MedicalRecord>();
