@@ -42,12 +42,6 @@ namespace MediRecordConverter
                 OperationFilePath = GetStringSetting("OperationFilePath", @"C:\Shinseikai\TXT2JSON\mouseoperation.exe");
                 SoapCopyFilePath = GetStringSetting("SoapCopyFilePath", @"C:\Shinseikai\TXT2JSON\soapcopy.exe");
 
-                // デバッグ情報を出力
-                System.Diagnostics.Debug.WriteLine($"設定読み込み完了:");
-                System.Diagnostics.Debug.WriteLine($"  EditorWidth: {EditorWidth}");
-                System.Diagnostics.Debug.WriteLine($"  EditorHeight: {EditorHeight}");
-                System.Diagnostics.Debug.WriteLine($"  EditorWindowPosition: '{EditorWindowPosition}'");
-                System.Diagnostics.Debug.WriteLine($"  MainWindowPosition: '{MainWindowPosition}'");
             }
             catch (Exception ex)
             {
@@ -65,30 +59,25 @@ namespace MediRecordConverter
         {
             string value = ConfigurationManager.AppSettings[key];
             string result = value ?? defaultValue;
-            System.Diagnostics.Debug.WriteLine($"設定取得: {key} = '{value}' (デフォルト: '{defaultValue}') → 結果: '{result}'");
             return result;
         }
 
         private Point ParseWindowPosition(string positionString, int windowWidth, int windowHeight, int defaultX = 10, int defaultY = 10)
         {
-            System.Diagnostics.Debug.WriteLine($"位置設定解析開始: '{positionString}', windowSize=({windowWidth},{windowHeight}), default=({defaultX},{defaultY})");
 
             try
             {
                 if (string.IsNullOrWhiteSpace(positionString))
                 {
-                    System.Diagnostics.Debug.WriteLine("位置設定が空文字列のためデフォルト位置を使用");
                     return new Point(defaultX, defaultY);
                 }
 
                 var position = positionString.ToLower().Trim();
-                System.Diagnostics.Debug.WriteLine($"正規化後の位置設定: '{position}'");
 
                 if (position.StartsWith("right"))
                 {
                     var coords = position.Replace("right", "").Trim();
                     var parts = coords.Split('+');
-                    System.Diagnostics.Debug.WriteLine($"right形式解析: parts=[{string.Join(",", parts)}]");
 
                     if (parts.Length >= 3)
                     {
@@ -99,14 +88,12 @@ namespace MediRecordConverter
                         var x = screenWidth - windowWidth - xOffset;
                         var y = yOffset;
 
-                        System.Diagnostics.Debug.WriteLine($"right形式計算結果: ({x},{y})");
                         return new Point(x, y);
                     }
                 }
                 else if (position.StartsWith("+"))
                 {
                     var parts = position.Split('+');
-                    System.Diagnostics.Debug.WriteLine($"+形式解析: parts=[{string.Join(",", parts)}], length={parts.Length}");
 
                     if (parts.Length >= 3)
                     {
@@ -125,14 +112,12 @@ namespace MediRecordConverter
                 else
                 {
                     var parts = position.Split(new char[] { '+', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    System.Diagnostics.Debug.WriteLine($"その他形式解析: parts=[{string.Join(",", parts)}]");
 
                     if (parts.Length >= 2)
                     {
                         var x = int.Parse(parts[0]);
                         var y = int.Parse(parts[1]);
 
-                        System.Diagnostics.Debug.WriteLine($"その他形式計算結果: ({x},{y})");
                         return new Point(x, y);
                     }
                 }
@@ -142,7 +127,6 @@ namespace MediRecordConverter
                 System.Diagnostics.Debug.WriteLine($"位置設定解析エラー: {ex.Message}");
             }
 
-            System.Diagnostics.Debug.WriteLine($"解析失敗、デフォルト位置を使用: ({defaultX},{defaultY})");
             return new Point(defaultX, defaultY);
         }
         public Point GetMainWindowPosition(int windowWidth, int windowHeight)
@@ -151,9 +135,6 @@ namespace MediRecordConverter
         }
         public Point GetEditorWindowPosition(int windowWidth, int windowHeight)
         {
-            System.Diagnostics.Debug.WriteLine($"エディターウィンドウ位置取得: EditorWindowPosition='{EditorWindowPosition}', size=({windowWidth},{windowHeight})");
-
-            // App.configの設定値を直接使用し、解析失敗時のみ画面中央をデフォルトにする
             var result = ParseWindowPosition(EditorWindowPosition, windowWidth, windowHeight, 0, 0);
 
             if (result.X == 0 && result.Y == 0 && EditorWindowPosition != "+0+0")
@@ -162,11 +143,9 @@ namespace MediRecordConverter
                 var centerX = (screenBounds.Width - windowWidth) / 2;
                 var centerY = (screenBounds.Height - windowHeight) / 2;
 
-                System.Diagnostics.Debug.WriteLine($"解析失敗のため画面中央に設定: ({centerX},{centerY})");
                 return new Point(centerX, centerY);
             }
 
-            System.Diagnostics.Debug.WriteLine($"エディターウィンドウ位置決定: ({result.X},{result.Y})");
             return result;
         }
     }
