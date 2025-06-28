@@ -19,72 +19,8 @@ namespace MediRecordConverter
         {
             this.initialText = text ?? "";
             this.config = configManager ?? new ConfigManager();
+            System.Diagnostics.Debug.WriteLine($"TextEditorForm初期化: ConfigManager EditorWindowPosition = '{this.config.EditorWindowPosition}'");
             InitializeComponent();
-        }
-
-        // 【修正】エディターウィンドウの初期位置を取得するメソッドを追加
-        private Point GetEditorWindowPosition()
-        {
-            try
-            {
-                var position = config.EditorWindowPosition.ToLower();
-
-                if (position.StartsWith("right"))
-                {
-                    // "right+x+y"形式の処理
-                    var coords = position.Replace("right", "").Trim();
-                    var parts = coords.Split('+');
-
-                    if (parts.Length >= 3)
-                    {
-                        var xOffset = int.Parse(parts[1]);
-                        var yOffset = int.Parse(parts[2]);
-
-                        var screenWidth = Screen.PrimaryScreen.WorkingArea.Width;
-                        var x = screenWidth - config.EditorWidth - xOffset;
-                        var y = yOffset;
-
-                        return new Point(x, y);
-                    }
-                }
-                else if (position.StartsWith("+"))
-                {
-                    // "+x+y"形式の処理
-                    var parts = position.Split('+');
-
-                    if (parts.Length >= 3)
-                    {
-                        // parts[0]は空文字列、parts[1]がx座標、parts[2]がy座標
-                        var x = int.Parse(parts[1]);
-                        var y = int.Parse(parts[2]);
-
-                        return new Point(x, y);
-                    }
-                }
-                else
-                {
-                    // その他の形式（例：数字のみ、カンマ区切りなど）の処理
-                    var parts = position.Split(new char[] { '+', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    if (parts.Length >= 2)
-                    {
-                        var x = int.Parse(parts[0]);
-                        var y = int.Parse(parts[1]);
-
-                        return new Point(x, y);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"エディター位置設定解析エラー: {ex.Message}");
-            }
-
-            // デフォルト位置（画面中央）
-            var screenBounds = Screen.PrimaryScreen.WorkingArea;
-            var centerX = (screenBounds.Width - config.EditorWidth) / 2;
-            var centerY = (screenBounds.Height - config.EditorHeight) / 2;
-            return new Point(centerX, centerY);
         }
 
         // 【追加】フォームのアイコンを設定するメソッド
@@ -111,7 +47,12 @@ namespace MediRecordConverter
             this.Text = "確認画面";
             this.Size = new Size(config.EditorWidth, config.EditorHeight);
             this.StartPosition = FormStartPosition.Manual;  // 【修正】ManualでConfigの位置を使用
-            this.Location = GetEditorWindowPosition();      // 【修正】Configから位置を取得
+
+            // 位置を取得してデバッグ情報を出力
+            Point editorPosition = config.GetEditorWindowPosition(config.EditorWidth, config.EditorHeight);
+            System.Diagnostics.Debug.WriteLine($"確認画面の位置設定: ({editorPosition.X}, {editorPosition.Y})");
+            this.Location = editorPosition;  // 【修正】Configから位置を取得
+
             this.MinimumSize = new Size(400, 300);
 
             // 【追加】アイコンの設定
@@ -179,6 +120,12 @@ namespace MediRecordConverter
 
             this.Controls.Add(mainLayout);
             this.ResumeLayout(false);
+
+            // ロードイベントで最終的な位置を確認
+            this.Load += (sender, e) => {
+                System.Diagnostics.Debug.WriteLine($"確認画面実際の表示位置: ({this.Location.X}, {this.Location.Y})");
+                System.Diagnostics.Debug.WriteLine($"確認画面サイズ: ({this.Size.Width}, {this.Size.Height})");
+            };
         }
 
         // 【修正6】保存ボタンの機能を拡張
