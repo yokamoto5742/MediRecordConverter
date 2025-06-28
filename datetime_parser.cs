@@ -47,7 +47,6 @@ namespace MediRecordConverter
         {
             if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(time))
             {
-                System.Diagnostics.Debug.WriteLine($"タイムスタンプ作成失敗: date={date}, time={time}");
                 return "";
             }
 

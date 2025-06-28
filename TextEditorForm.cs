@@ -12,12 +12,10 @@ namespace MediRecordConverter
         private Button saveButton;
         private Button pasteButton;
         private Button clearButton;
-        private string initialText;
         private ConfigManager config;
 
         public TextEditorForm(string text, ConfigManager configManager = null)
         {
-            this.initialText = text ?? "";
             this.config = configManager ?? new ConfigManager();
             System.Diagnostics.Debug.WriteLine($"TextEditorForm初期化: ConfigManager EditorWindowPosition = '{this.config.EditorWindowPosition}'");
             InitializeComponent();
@@ -65,7 +63,6 @@ namespace MediRecordConverter
             textEditor.ScrollBars = ScrollBars.Both;
             textEditor.Dock = DockStyle.Fill;
             textEditor.Font = new Font(config.TextAreaFontName, config.TextAreaFontSize);
-            textEditor.Text = initialText;
 
             // ボタンパネル
             FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
@@ -191,16 +188,6 @@ namespace MediRecordConverter
         private void CloseButton_Click(object sender, EventArgs e)
         {
             this.Close();
-        }
-
-        public string GetText()
-        {
-            return textEditor.Text;
-        }
-
-        public void SetText(string text)
-        {
-            textEditor.Text = text ?? "";
         }
     }
 }
