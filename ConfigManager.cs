@@ -69,15 +69,6 @@ namespace MediRecordConverter
             return result;
         }
 
-        /// <summary>
-        /// 位置設定文字列を解析してPointを返す汎用メソッド
-        /// </summary>
-        /// <param name="positionString">位置設定文字列（例："+10+10", "right+10+180"）</param>
-        /// <param name="windowWidth">ウィンドウ幅</param>
-        /// <param name="windowHeight">ウィンドウ高さ</param>
-        /// <param name="defaultX">デフォルトX座標</param>
-        /// <param name="defaultY">デフォルトY座標</param>
-        /// <returns>計算されたPoint</returns>
         private Point ParseWindowPosition(string positionString, int windowWidth, int windowHeight, int defaultX = 10, int defaultY = 10)
         {
             System.Diagnostics.Debug.WriteLine($"位置設定解析開始: '{positionString}', windowSize=({windowWidth},{windowHeight}), default=({defaultX},{defaultY})");
@@ -154,18 +145,10 @@ namespace MediRecordConverter
             System.Diagnostics.Debug.WriteLine($"解析失敗、デフォルト位置を使用: ({defaultX},{defaultY})");
             return new Point(defaultX, defaultY);
         }
-
-        /// <summary>
-        /// メインウィンドウの位置を取得
-        /// </summary>
         public Point GetMainWindowPosition(int windowWidth, int windowHeight)
         {
             return ParseWindowPosition(MainWindowPosition, windowWidth, windowHeight, 10, 10);
         }
-
-        /// <summary>
-        /// エディターウィンドウの位置を取得
-        /// </summary>
         public Point GetEditorWindowPosition(int windowWidth, int windowHeight)
         {
             System.Diagnostics.Debug.WriteLine($"エディターウィンドウ位置取得: EditorWindowPosition='{EditorWindowPosition}', size=({windowWidth},{windowHeight})");
@@ -173,7 +156,6 @@ namespace MediRecordConverter
             // App.configの設定値を直接使用し、解析失敗時のみ画面中央をデフォルトにする
             var result = ParseWindowPosition(EditorWindowPosition, windowWidth, windowHeight, 0, 0);
 
-            // ParseWindowPositionで(0,0)が返された場合は解析が失敗したと判断し、画面中央に設定
             if (result.X == 0 && result.Y == 0 && EditorWindowPosition != "+0+0")
             {
                 var screenBounds = Screen.PrimaryScreen.WorkingArea;
