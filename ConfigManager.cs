@@ -7,16 +7,16 @@ namespace MediRecordConverter
 {
     public class ConfigManager
     {
-        public int WindowWidth { get; private set; } = 1100;
-        public int WindowHeight { get; private set; } = 800;
-        public int EditorWidth { get; private set; } = 800;
-        public int EditorHeight { get; private set; } = 800;
-        public int TextAreaFontSize { get; private set; } = 12;
+        public int WindowWidth { get; private set; } = 500;
+        public int WindowHeight { get; private set; } = 600;
+        public int EditorWidth { get; private set; } = 500;
+        public int EditorHeight { get; private set; } = 600;
+        public int TextAreaFontSize { get; private set; } = 10;
         public string TextAreaFontName { get; private set; } = "MS Gothic";
         public string MainWindowPosition { get; private set; } = "+10+10";
         public string EditorWindowPosition { get; private set; } = "+10+10";
-        public int ButtonWidth { get; private set; } = 120;
-        public int ButtonHeight { get; private set; } = 40;
+        public int ButtonWidth { get; private set; } = 100;
+        public int ButtonHeight { get; private set; } = 30;
         public string OperationFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\mouseoperation.exe";
         public string SoapCopyFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\soapcopy.exe";
 
@@ -29,16 +29,16 @@ namespace MediRecordConverter
         {
             try
             {
-                WindowWidth = GetIntSetting("WindowWidth", 1100);
-                WindowHeight = GetIntSetting("WindowHeight", 800);
-                EditorWidth = GetIntSetting("EditorWidth", 800);
-                EditorHeight = GetIntSetting("EditorHeight", 800);
-                TextAreaFontSize = GetIntSetting("TextAreaFontSize", 12);
+                WindowWidth = GetIntSetting("WindowWidth", 500);
+                WindowHeight = GetIntSetting("WindowHeight", 600);
+                EditorWidth = GetIntSetting("EditorWidth", 500);
+                EditorHeight = GetIntSetting("EditorHeight", 600);
+                TextAreaFontSize = GetIntSetting("TextAreaFontSize", 11);
                 TextAreaFontName = GetStringSetting("TextAreaFontName", "MS Gothic");
                 MainWindowPosition = GetStringSetting("MainWindowPosition", "+10+10");
                 EditorWindowPosition = GetStringSetting("EditorWindowPosition", "+10+10");
-                ButtonWidth = GetIntSetting("ButtonWidth", 120);
-                ButtonHeight = GetIntSetting("ButtonHeight", 40);
+                ButtonWidth = GetIntSetting("ButtonWidth", 100);
+                ButtonHeight = GetIntSetting("ButtonHeight", 30);
                 OperationFilePath = GetStringSetting("OperationFilePath", @"C:\Shinseikai\TXT2JSON\mouseoperation.exe");
                 SoapCopyFilePath = GetStringSetting("SoapCopyFilePath", @"C:\Shinseikai\TXT2JSON\soapcopy.exe");
             }
@@ -66,7 +66,6 @@ namespace MediRecordConverter
 
                 if (position.StartsWith("right"))
                 {
-                    // "right+x+y"形式の処理
                     var coords = position.Replace("right", "").Trim();
                     var parts = coords.Split('+');
 
@@ -84,12 +83,11 @@ namespace MediRecordConverter
                 }
                 else if (position.StartsWith("+"))
                 {
-                    // "+x+y"形式の処理を追加
                     var parts = position.Split('+');
 
                     if (parts.Length >= 3)
                     {
-                        // parts[0]は空文字列、parts[1]がx座標、parts[2]がy座標
+                        // parts[1]がx座標、parts[2]がy座標
                         var x = int.Parse(parts[1]);
                         var y = int.Parse(parts[2]);
 
@@ -98,7 +96,6 @@ namespace MediRecordConverter
                 }
                 else
                 {
-                    // その他の形式（例：数字のみ、カンマ区切りなど）の処理を追加
                     var parts = position.Split(new char[] { '+', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
                     if (parts.Length >= 2)

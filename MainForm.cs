@@ -1,7 +1,5 @@
-﻿using MediRecordConverter;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -41,7 +39,7 @@ namespace MediRecordConverter
             this.Size = new Size(config.WindowWidth, config.WindowHeight);
             this.StartPosition = FormStartPosition.Manual;
             this.Location = config.GetMainWindowPosition(config.WindowWidth, config.WindowHeight);
-            this.MinimumSize = new Size(500, 400);
+            this.MinimumSize = new Size(500, 600);
 
             // フォントの設定
             Font textFont = new Font(config.TextAreaFontName, config.TextAreaFontSize);
@@ -90,7 +88,7 @@ namespace MediRecordConverter
 
             statsLabel = new Label();
             statsLabel.Text = "カルテ記載行数: 0  文字数: 0";
-            statsLabel.Location = new Point(5, 10);
+            statsLabel.Location = new Point(20, 10);
             statsLabel.AutoSize = true;
 
             monitorStatusLabel = new Label();
@@ -114,7 +112,7 @@ namespace MediRecordConverter
             Button soapButton = CreateButton("詳細検索設定", RunMouseAutomation);
             soapCopyButton = CreateButton("カルテコピー", SoapCopy); // フィールドに保存
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
-            Button clearButton = CreateButton("テキストクリア", ClearText);
+            Button clearButton = CreateButton("クリア", ClearText);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
             Button closeButton = CreateButton("閉じる", (s, e) => this.Close());
 
@@ -293,7 +291,7 @@ namespace MediRecordConverter
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"SOAPコピー中にエラーが発生しました: {ex.Message}", "エラー",
+                MessageBox.Show($"カルテコピー中にエラーが発生しました: {ex.Message}", "エラー",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -344,7 +342,7 @@ namespace MediRecordConverter
             label.Size = new Size(320, 60);
             label.Location = new Point(15, 20);
             label.TextAlign = ContentAlignment.MiddleCenter;
-            label.Font = new Font("MS Gothic", 10);
+            label.Font = new Font("MS Gothic", 11);
 
             popup.Controls.Add(label);
 
@@ -376,10 +374,10 @@ namespace MediRecordConverter
 
                 SetMonitoringState(false);
 
-                // 医療記録データを解析（統計機能削除、ソート機能追加）
+                // カルテテキストを解析
                 var parsedData = textParser.ParseMedicalText(text);
 
-                // JSON形式に変換（空のフィールドを除外する設定）
+                // JSON形式に変換
                 var jsonSettings = new JsonSerializerSettings
                 {
                     Formatting = Formatting.Indented,
@@ -392,7 +390,7 @@ namespace MediRecordConverter
                 textOutput.Text = jsonData;
                 Clipboard.SetText(jsonData);
 
-                ShowAutoCloseMessage("変換してクリップボードにコピーしました");
+                ShowAutoCloseMessage("変換したテキストをコピーしました");
             }
             catch (Exception ex)
             {
