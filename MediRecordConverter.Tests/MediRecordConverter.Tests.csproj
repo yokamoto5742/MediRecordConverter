@@ -56,22 +56,12 @@
   <ItemGroup>
     <Compile Include="IntegrationTests\integration_tests.cs" />
     <Compile Include="UnitTests\config_manager_tests.cs" />
-    <Compile Include="UnitTests\DateTimeParserTests.cs" />
     <Compile Include="UnitTests\datetime_parser_tests.cs" />
-    <Compile Include="UnitTests\DoctorRecordExtractorTests.cs" />
     <Compile Include="UnitTests\doctor_record_extractor_tests.cs" />
     <Compile Include="UnitTests\medical_record_processor_tests.cs" />
-    <Compile Include="UnitTests\SOAPClassifierTests.cs" />
-    <Compile Include="UnitTests\MedicalRecordProcessorTests.cs" />
     <Compile Include="UnitTests\soap_classifier_tests.cs" />
-    <Compile Include="UnitTests\TextParserTests.cs" />
-    <Compile Include="UnitTests\ConfigManagerTests.cs" />
-    <Compile Include="IntegrationTests\TextParsingIntegrationTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UnitTests\text_parser_tests.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MediRecordConverter.csproj">
