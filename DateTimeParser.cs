@@ -14,8 +14,9 @@ namespace MediRecordConverter
 
             var datePatterns = new string[]
             {
-                @"^(\d{4}/\d{1,2}/\d{1,2})\([月火水木金土日]\)$",  // 行全体が日付(曜日)
-                @"^(\d{4}/\d{1,2}/\d{1,2})$",                      // 行全体が日付
+                @"^(\d{4}/\d{1,2}/\d{1,2})\([月火水木金土日]\)",  // 日付(曜日) + 追加テキスト可
+                @"^(\d{4}/\d{1,2}/\d{1,2})\([月火水木金土日]\)$", // 行全体が日付(曜日)のみ
+                @"^(\d{4}/\d{1,2}/\d{1,2})$",                      // 行全体が日付のみ
             };
 
             foreach (var pattern in datePatterns)
@@ -34,7 +35,7 @@ namespace MediRecordConverter
                         var result = new DateTime(year, month, day).ToString("yyyy-MM-ddT");
                         return result;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         return null;
                     }
@@ -59,7 +60,7 @@ namespace MediRecordConverter
                 var result = $"{date}{hour:D2}:{minute:D2}:00Z";
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return "";
             }
