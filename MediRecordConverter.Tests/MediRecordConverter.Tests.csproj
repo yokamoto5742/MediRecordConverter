@@ -54,20 +54,17 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IntegrationTests\integration_tests.cs" />
-    <Compile Include="UnitTests\config_manager_tests.cs" />
-    <Compile Include="UnitTests\datetime_parser_tests.cs" />
-    <Compile Include="UnitTests\doctor_record_extractor_tests.cs" />
-    <Compile Include="UnitTests\medical_record_processor_tests.cs" />
-    <Compile Include="UnitTests\soap_classifier_tests.cs" />
-    <Compile Include="UnitTests\text_parser_tests.cs" />
+    <Compile Include="IntegrationTests\IntegrationTests.cs" />
+    <Compile Include="UnitTests\ConfigManagerTests.cs" />
+    <Compile Include="UnitTests\DateTimeParserTests.cs" />
+    <Compile Include="UnitTests\DoctorRecordExtractorTests.cs" />
+    <Compile Include="UnitTests\MedicalRecordProcessorTests.cs" />
+    <Compile Include="UnitTests\SoapClassifierTests.cs" />
+    <Compile Include="UnitTests\TextParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MediRecordConverter.csproj">
-      <Project>{790ffd55-0653-42f8-9c3a-b011385bc2ff}</Project>
-      <Name>MediRecordConverter</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
