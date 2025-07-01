@@ -38,7 +38,7 @@ namespace MediRecordConverter
 
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    var line = lines[i].Trim();
+                    var line = lines[i]?.Trim();
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
 

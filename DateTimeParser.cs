@@ -7,6 +7,12 @@ namespace MediRecordConverter
     {
         public string ExtractDate(string line)
         {
+            // null または空文字列のチェックを追加
+            if (string.IsNullOrEmpty(line))
+            {
+                return null;
+            }
+
             if (IsDoctorRecordLine(line))
             {
                 return null;
@@ -21,24 +27,31 @@ namespace MediRecordConverter
 
             foreach (var pattern in datePatterns)
             {
-                var match = Regex.Match(line, pattern);
-                if (match.Success)
+                try
                 {
-                    try
+                    var match = Regex.Match(line, pattern);
+                    if (match.Success)
                     {
-                        var dateStr = match.Groups[1].Value;
-                        var dateParts = dateStr.Split('/');
-                        var year = int.Parse(dateParts[0]);
-                        var month = int.Parse(dateParts[1]);
-                        var day = int.Parse(dateParts[2]);
+                        try
+                        {
+                            var dateStr = match.Groups[1].Value;
+                            var dateParts = dateStr.Split('/');
+                            var year = int.Parse(dateParts[0]);
+                            var month = int.Parse(dateParts[1]);
+                            var day = int.Parse(dateParts[2]);
 
-                        var result = new DateTime(year, month, day).ToString("yyyy-MM-ddT");
-                        return result;
+                            var result = new DateTime(year, month, day).ToString("yyyy-MM-ddT");
+                            return result;
+                        }
+                        catch (Exception)
+                        {
+                            return null;
+                        }
                     }
-                    catch (Exception)
-                    {
-                        return null;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ExtractDate正規表現エラー: {ex.Message}");
                 }
             }
             return null;
@@ -68,15 +81,29 @@ namespace MediRecordConverter
 
         private bool IsDoctorRecordLine(string line)
         {
+            // null または空文字列のチェックを追加
+            if (string.IsNullOrEmpty(line))
+            {
+                return false;
+            }
+
             var patterns = new string[]
             {
                 @"^(内科|外科|透析|整形外科|皮膚科|眼科|耳鼻咽喉科|泌尿器科|小児科|精神科|放射線科|麻酔科|リハビリ科|薬剤科|検査科|栄養科)[\s　]+.*?\d{1,2}:\d{2}"
             };
 
-            foreach (var pattern in patterns)
+            try
             {
-                if (Regex.IsMatch(line, pattern))
-                    return true;
+                foreach (var pattern in patterns)
+                {
+                    if (Regex.IsMatch(line, pattern))
+                        return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"IsDoctorRecordLine正規表現エラー: {ex.Message}");
+                return false;
             }
 
             return false;

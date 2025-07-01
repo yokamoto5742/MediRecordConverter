@@ -8,22 +8,29 @@ namespace MediRecordConverter
     {
         public List<MedicalRecord> CleanupRecords(List<MedicalRecord> records)
         {
+            // nullチェックを追加 - NullReferenceExceptionを発生させる
+            if (records == null)
+            {
+                throw new System.NullReferenceException("records cannot be null");
+            }
+
             var cleanedRecords = new List<MedicalRecord>();
 
             foreach (var record in records)
             {
+                // nullレコードがあると NullReferenceException が発生する
                 if (!string.IsNullOrEmpty(record.timestamp) && !string.IsNullOrEmpty(record.department))
                 {
                     var cleanRecord = new MedicalRecord
                     {
                         timestamp = record.timestamp ?? "",
                         department = record.department ?? "",
-                        subject = string.IsNullOrEmpty(record.subject) ? null : record.subject,
-                        objectData = string.IsNullOrEmpty(record.objectData) ? null : record.objectData,
-                        assessment = string.IsNullOrEmpty(record.assessment) ? null : record.assessment,
-                        plan = string.IsNullOrEmpty(record.plan) ? null : record.plan,
-                        comment = string.IsNullOrEmpty(record.comment) ? null : record.comment,
-                        summary = string.IsNullOrEmpty(record.summary) ? null : record.summary
+                        subject = string.IsNullOrWhiteSpace(record.subject) ? null : record.subject,
+                        objectData = string.IsNullOrWhiteSpace(record.objectData) ? null : record.objectData,
+                        assessment = string.IsNullOrWhiteSpace(record.assessment) ? null : record.assessment,
+                        plan = string.IsNullOrWhiteSpace(record.plan) ? null : record.plan,
+                        comment = string.IsNullOrWhiteSpace(record.comment) ? null : record.comment,
+                        summary = string.IsNullOrWhiteSpace(record.summary) ? null : record.summary
                     };
 
                     cleanedRecords.Add(cleanRecord);

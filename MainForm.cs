@@ -110,15 +110,15 @@ namespace MediRecordConverter
             // ボタン作成
             Button newButton = CreateButton("新規登録", StartMonitoring);
             Button soapButton = CreateButton("詳細検索設定", RunMouseAutomation);
-            soapCopyButton = CreateButton("カルテコピー", SoapCopy); // フィールドに保存
+            soapCopyButton = CreateButton("カルテコピー", SoapCopy);
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
-            Button clearButton = CreateButton("クリア", ClearText);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
+            Button clearButton = CreateButton("クリア", ClearText);
             Button closeButton = CreateButton("閉じる", (s, e) => this.Close());
 
             buttonPanel.Controls.AddRange(new Control[] {
                 newButton, soapButton, soapCopyButton, convertButton,
-                clearButton, editorButton, closeButton
+                editorButton, clearButton, closeButton
             });
 
             // メインレイアウトに追加

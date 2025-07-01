@@ -15,7 +15,19 @@ namespace MediRecordConverter
 
         public void ClassifySOAPContent(string line, MedicalRecord record)
         {
+            // null入力やnullレコードの処理を追加
+            if (string.IsNullOrEmpty(line) || record == null)
+            {
+                return;
+            }
+
             var trimmedLine = line.Trim();
+
+            // 空白のみの行は処理しない
+            if (string.IsNullOrWhiteSpace(trimmedLine))
+            {
+                return;
+            }
 
             var soapMapping = new Dictionary<string, string>
             {
