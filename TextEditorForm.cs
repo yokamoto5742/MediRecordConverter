@@ -12,14 +12,18 @@ namespace MediRecordConverter
         private Button saveButton;
         private Button pasteButton;
         private Button clearButton;
+        private Label statsLabel;
         private ConfigManager config;
+        private string initialText;
 
         public TextEditorForm(string text, ConfigManager configManager = null)
         {
             this.config = configManager ?? new ConfigManager();
+            this.initialText = text ?? "";
             System.Diagnostics.Debug.WriteLine($"TextEditorForm初期化: ConfigManager EditorWindowPosition = '{this.config.EditorWindowPosition}'");
             InitializeComponent();
         }
+
         private void SetFormIcon()
         {
             try
@@ -52,10 +56,11 @@ namespace MediRecordConverter
             // メインレイアウト
             TableLayoutPanel mainLayout = new TableLayoutPanel();
             mainLayout.Dock = DockStyle.Fill;
-            mainLayout.RowCount = 2;
+            mainLayout.RowCount = 3;
             mainLayout.ColumnCount = 1;
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 90F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 10F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 85F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 15F));
 
             // テキストエディタ
             textEditor = new TextBox();
@@ -63,11 +68,24 @@ namespace MediRecordConverter
             textEditor.ScrollBars = ScrollBars.Both;
             textEditor.Dock = DockStyle.Fill;
             textEditor.Font = new Font(config.TextAreaFontName, config.TextAreaFontSize);
+            textEditor.TextChanged += (s, e) => UpdateStats();
+
+            // ステータスパネル
+            Panel statsPanel = new Panel();
+            statsPanel.Dock = DockStyle.Fill;
+
+            statsLabel = new Label();
+            statsLabel.Text = "行数: 0  文字数: 0";
+            statsLabel.Location = new Point(20, 5);
+            statsLabel.AutoSize = true;
+
+            statsPanel.Controls.Add(statsLabel);
 
             // ボタンパネル
             FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
             buttonPanel.Dock = DockStyle.Fill;
             buttonPanel.FlowDirection = FlowDirection.RightToLeft;
+            buttonPanel.WrapContents = true;
             buttonPanel.Padding = new Padding(10);
 
             closeButton = new Button();
@@ -99,17 +117,39 @@ namespace MediRecordConverter
             buttonPanel.Controls.Add(clearButton);
             buttonPanel.Controls.Add(pasteButton);
 
-
             mainLayout.Controls.Add(textEditor, 0, 0);
-            mainLayout.Controls.Add(buttonPanel, 0, 1);
+            mainLayout.Controls.Add(statsPanel, 0, 1);
+            mainLayout.Controls.Add(buttonPanel, 0, 2);
 
             this.Controls.Add(mainLayout);
             this.ResumeLayout(false);
+
+            // 初期テキストを設定
+            textEditor.Text = initialText;
+            UpdateStats();
 
             this.Load += (sender, e) => {
                 System.Diagnostics.Debug.WriteLine($"確認画面実際の表示位置: ({this.Location.X}, {this.Location.Y})");
                 System.Diagnostics.Debug.WriteLine($"確認画面サイズ: ({this.Size.Width}, {this.Size.Height})");
             };
+        }
+
+        private void UpdateStats()
+        {
+            string text = textEditor?.Text ?? "";
+            int lines = string.IsNullOrEmpty(text) ? 0 : text.Split('\n').Length;
+            int chars = text.Length;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                lines = 0;
+                chars = 0;
+            }
+
+            if (statsLabel != null)
+            {
+                statsLabel.Text = $"行数: {lines}  文字数: {chars}";
+            }
         }
 
         private void SaveButton_Click(object sender, EventArgs e)
@@ -118,7 +158,7 @@ namespace MediRecordConverter
             {
                 string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-                string fileName = $"出力結果{DateTime.Now:yyyyMMddHHmm}.txt";
+                string fileName = $"出力結果{DateTime.Now:yyyyMMddHHmmss}.txt";
                 string filePath = Path.Combine(downloadsPath, fileName);
 
                 File.WriteAllText(filePath, textEditor.Text, System.Text.Encoding.UTF8);
