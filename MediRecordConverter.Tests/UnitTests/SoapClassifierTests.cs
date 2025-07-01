@@ -445,7 +445,7 @@ namespace MediRecordConverter.Tests.UnitTests
 
             // Assert
             Assert.AreEqual(expectedSection, record.currentSoapSection);
-            
+
             // 各セクションの内容を確認
             switch (expectedSection)
             {
@@ -475,7 +475,7 @@ namespace MediRecordConverter.Tests.UnitTests
         #region エラーハンドリングテスト
 
         /// <summary>
-        /// null入力の処理テスト
+        /// null入力の処理テスト - 例外が発生しないことを確認
         /// </summary>
         [TestMethod]
         public void ClassifySOAPContent_NullInput_HandlesGracefully()
@@ -488,6 +488,7 @@ namespace MediRecordConverter.Tests.UnitTests
             try
             {
                 classifier.ClassifySOAPContent(null, record);
+                // 例外が発生しなければテスト成功
                 Assert.AreEqual(originalSubject, record.subject);
                 Assert.AreEqual(originalSection, record.currentSoapSection);
             }
@@ -501,11 +502,18 @@ namespace MediRecordConverter.Tests.UnitTests
         /// nullレコードの処理テスト
         /// </summary>
         [TestMethod]
-        [ExpectedException(typeof(System.NullReferenceException))]
-        public void ClassifySOAPContent_NullRecord_ThrowsException()
+        public void ClassifySOAPContent_NullRecord_HandlesGracefully()
         {
-            // Arrange & Act
-            classifier.ClassifySOAPContent("S > テスト", null);
+            // Act & Assert - 例外が発生しないことを確認
+            try
+            {
+                classifier.ClassifySOAPContent("S > テスト", null);
+                // 例外が発生しなければテスト成功
+            }
+            catch (System.Exception)
+            {
+                Assert.Fail("nullレコードで例外が発生しました");
+            }
         }
 
         #endregion

@@ -310,7 +310,7 @@ namespace MediRecordConverter.Tests.UnitTests
         #region エラーハンドリングテスト
 
         /// <summary>
-        /// null文字列の場合のテスト
+        /// null文字列の場合のテスト - 例外を発生させずfalseを返すことを期待
         /// </summary>
         [TestMethod]
         public void ExtractDoctorRecord_NullString_ReturnsNull()
@@ -318,15 +318,20 @@ namespace MediRecordConverter.Tests.UnitTests
             // Arrange
             string input = null;
 
-            // Act
-            var result = extractor.ExtractDoctorRecord(input);
-
-            // Assert
-            Assert.IsFalse(result.HasValue);
+            // Act & Assert - 例外が発生しないことを確認
+            try
+            {
+                var result = extractor.ExtractDoctorRecord(input);
+                Assert.IsFalse(result.HasValue);
+            }
+            catch (System.Exception)
+            {
+                Assert.Fail("null文字列で例外が発生しました");
+            }
         }
 
         /// <summary>
-        /// IsDoctorRecordLineでnull文字列の場合のテスト
+        /// IsDoctorRecordLineでnull文字列の場合のテスト - 例外を発生させずfalseを返すことを期待
         /// </summary>
         [TestMethod]
         public void IsDoctorRecordLine_NullString_ReturnsFalse()
@@ -334,11 +339,16 @@ namespace MediRecordConverter.Tests.UnitTests
             // Arrange
             string input = null;
 
-            // Act
-            bool result = extractor.IsDoctorRecordLine(input);
-
-            // Assert
-            Assert.IsFalse(result);
+            // Act & Assert - 例外が発生しないことを確認
+            try
+            {
+                bool result = extractor.IsDoctorRecordLine(input);
+                Assert.IsFalse(result);
+            }
+            catch (System.Exception)
+            {
+                Assert.Fail("null文字列で例外が発生しました");
+            }
         }
 
         #endregion
