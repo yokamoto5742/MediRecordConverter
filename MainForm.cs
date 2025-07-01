@@ -411,7 +411,7 @@ namespace MediRecordConverter
             SetMonitoringState(false);
             this.Hide();
 
-            TextEditorForm editor = new TextEditorForm("",config);
+            TextEditorForm editor = new TextEditorForm("", config);
             editor.FormClosed += (s, args) =>
             {
                 this.Show();

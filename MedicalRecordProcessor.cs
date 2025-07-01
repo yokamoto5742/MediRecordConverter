@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,7 +8,6 @@ namespace MediRecordConverter
     {
         public List<MedicalRecord> CleanupRecords(List<MedicalRecord> records)
         {
-            // nullƒ`ƒFƒbƒN‚ğ’Ç‰Á - NullReferenceException‚ğ”­¶‚³‚¹‚é
             if (records == null)
             {
                 throw new System.NullReferenceException("records cannot be null");
@@ -18,7 +17,6 @@ namespace MediRecordConverter
 
             foreach (var record in records)
             {
-                // nullƒŒƒR[ƒh‚ª‚ ‚é‚Æ NullReferenceException ‚ª”­¶‚·‚é
                 if (!string.IsNullOrEmpty(record.timestamp) && !string.IsNullOrEmpty(record.department))
                 {
                     var cleanRecord = new MedicalRecord
