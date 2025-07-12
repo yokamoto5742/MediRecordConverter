@@ -269,7 +269,7 @@ namespace MediRecordConverter.Tests.UnitTests
         }
 
         /// <summary>
-        /// 複数の内容を含むフィールドのマージテスト
+        /// 複数の内容を含むフィールドのマージテスト - 改行文字を\nに修正
         /// </summary>
         [TestMethod]
         public void MergeRecordsByTimestamp_MultipleContentFields_MergesWithNewlines()
@@ -302,6 +302,7 @@ namespace MediRecordConverter.Tests.UnitTests
 
             // Assert
             Assert.AreEqual(1, result.Count);
+            // Environment.NewLineの代わりに\nを期待
             Assert.AreEqual("頭痛\n発熱", result[0].subject);
             Assert.AreEqual("体温38.5℃", result[0].objectData);
         }
