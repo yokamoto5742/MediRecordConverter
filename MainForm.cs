@@ -114,11 +114,12 @@ namespace MediRecordConverter
             Button convertButton = CreateButton("JSON形式変換", ConvertToJson);
             Button editorButton = CreateButton("確認画面", OpenTextEditor);
             Button clearButton = CreateButton("クリア", ClearText);
+            Button originalCopyButton = CreateButton("変換前コピー", CopyOriginalText);
             Button closeButton = CreateButton("閉じる", (s, e) => this.Close());
 
             buttonPanel.Controls.AddRange(new Control[] {
                 newButton, soapButton, soapCopyButton, convertButton,
-                editorButton, clearButton, closeButton
+                editorButton, clearButton, originalCopyButton, closeButton
             });
 
             // メインレイアウトに追加
@@ -418,6 +419,29 @@ namespace MediRecordConverter
                 isMonitoringClipboard = false;
             };
             editor.Show();
+        }
+
+        private void CopyOriginalText(object sender, EventArgs e)
+        {
+            try
+            {
+                string text = textInput?.Text ?? "";
+
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    MessageBox.Show("コピーするカルテ記載がありません。", "情報",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Clipboard.SetText(text);
+                ShowAutoCloseMessage("変換前のカルテ記載をコピーしました");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"コピー中にエラーが発生しました: {ex.Message}", "エラー",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
