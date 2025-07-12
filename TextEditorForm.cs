@@ -65,9 +65,12 @@ namespace MediRecordConverter
             // テキストエディタ
             textEditor = new TextBox();
             textEditor.Multiline = true;
-            textEditor.ScrollBars = ScrollBars.Both;
+            textEditor.WordWrap = true;
+            textEditor.ScrollBars = ScrollBars.Vertical;
             textEditor.Dock = DockStyle.Fill;
             textEditor.Font = new Font(config.TextAreaFontName, config.TextAreaFontSize);
+            textEditor.AcceptsReturn = true;
+            textEditor.AcceptsTab = true;
             textEditor.TextChanged += (s, e) => UpdateStats();
 
             // ステータスパネル

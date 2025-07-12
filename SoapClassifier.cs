@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -212,7 +213,7 @@ namespace MediRecordConverter
             if (string.IsNullOrEmpty(newContent))
                 return existing;
 
-            return existing + "\n" + newContent;
+            return existing + Environment.NewLine + newContent;
         }
     }
 }
