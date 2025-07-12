@@ -129,63 +129,10 @@ namespace MediRecordConverter
                     record.summary = AppendContent(record.summary, content);
                     break;
                 default:
-                    if (IsObjectiveContent(content))
-                    {
-                        record.objectData = AppendContent(record.objectData, content);
-                        record.currentSoapSection = "object";
-                    }
-                    else if (IsAssessmentContent(content))
-                    {
-                        record.assessment = AppendContent(record.assessment, content);
-                        record.currentSoapSection = "assessment";
-                    }
-                    else if (IsPlanContent(content))
-                    {
-                        record.plan = AppendContent(record.plan, content);
-                        record.currentSoapSection = "plan";
-                    }
-                    else
-                    {
-                        record.subject = AppendContent(record.subject, content);
-                        record.currentSoapSection = "subject";
-                    }
+                    record.subject = AppendContent(record.subject, content);
+                    record.currentSoapSection = "comment";
                     break;
             }
-        }
-
-        private bool IsObjectiveContent(string content)
-        {
-            var objectiveKeywords = new string[]
-            {
-                "結膜", "角膜", "前房", "水晶体", "乳頭", "網膜", "眼圧", "視力",
-                "血圧", "体温", "脈拍", "呼吸", "血液検査", "検査結果", "画像", "所見",
-                "slit", "cor", "ac", "lens", "disc", "fds", "AVG", "mmHg"
-            };
-
-            return objectiveKeywords.Any(keyword => content.Contains(keyword));
-        }
-
-        private bool IsAssessmentContent(string content)
-        {
-            var assessmentKeywords = new string[]
-            {
-                "＃", "#", "診断", "評価", "慢性", "症", "病", "疾患", "状態", "不全",
-                "出血", "結膜下出血", "白内障", "緑内障", "進行", "影響"
-            };
-
-            return assessmentKeywords.Any(keyword => content.Contains(keyword));
-        }
-
-        private bool IsPlanContent(string content)
-        {
-            var planKeywords = new string[]
-            {
-                "治療", "処方", "継続", "指導", "制限", "予定", "検討", "再開",
-                "維持", "採血", "注射", "薬", "mg", "錠", "単位", "再診",
-                "medi", "終了", "指示", "週間後", "視力", "眼圧"
-            };
-
-            return planKeywords.Any(keyword => content.Contains(keyword));
         }
 
         private bool IsHeaderLine(string line)
