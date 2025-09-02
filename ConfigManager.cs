@@ -19,6 +19,7 @@ namespace MediRecordConverter
         public int ButtonHeight { get; private set; } = 30;
         public string OperationFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\mouseoperation.exe";
         public string SoapCopyFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\soapcopy.exe";
+        public int FileCleanupIntervalMinutes { get; private set; } = 60;
 
         public ConfigManager()
         {
@@ -41,6 +42,7 @@ namespace MediRecordConverter
                 ButtonHeight = GetIntSetting("ButtonHeight", 30);
                 OperationFilePath = GetStringSetting("OperationFilePath", @"C:\Shinseikai\TXT2JSON\mouseoperation.exe");
                 SoapCopyFilePath = GetStringSetting("SoapCopyFilePath", @"C:\Shinseikai\TXT2JSON\soapcopy.exe");
+                FileCleanupIntervalMinutes = GetIntSetting("FileCleanupIntervalMinutes", 60);
 
             }
             catch (Exception ex)

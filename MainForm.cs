@@ -30,6 +30,7 @@ namespace MediRecordConverter
             InitializeCustomComponents();
             SetupClipboardMonitoring();
             UpdateStats();
+            CleanupOldFiles();
         }
 
         private void InitializeCustomComponents()
@@ -441,6 +442,39 @@ namespace MediRecordConverter
             {
                 MessageBox.Show($"コピー中にエラーが発生しました: {ex.Message}", "エラー",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CleanupOldFiles()
+        {
+            try
+            {
+                string downloadsPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads";
+                if (!Directory.Exists(downloadsPath)) return;
+
+                string[] karteFiles = Directory.GetFiles(downloadsPath, "カルテ変換*.txt");
+                DateTime cutoffTime = DateTime.Now.AddMinutes(-config.FileCleanupIntervalMinutes);
+
+                foreach (string filePath in karteFiles)
+                {
+                    FileInfo fileInfo = new FileInfo(filePath);
+                    if (fileInfo.CreationTime < cutoffTime)
+                    {
+                        try
+                        {
+                            File.Delete(filePath);
+                            System.Diagnostics.Debug.WriteLine($"古いファイルを削除: {Path.GetFileName(filePath)}");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"ファイル削除エラー: {Path.GetFileName(filePath)} - {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ファイルクリーンアップエラー: {ex.Message}");
             }
         }
 
