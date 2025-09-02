@@ -161,7 +161,7 @@ namespace MediRecordConverter
             {
                 string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 
-                string fileName = $"出力結果{DateTime.Now:yyyyMMddHHmmss}.txt";
+                string fileName = $"カルテ変換{DateTime.Now:yyyyMMddHHmmss}.txt";
                 string filePath = Path.Combine(downloadsPath, fileName);
 
                 File.WriteAllText(filePath, textEditor.Text, System.Text.Encoding.UTF8);
