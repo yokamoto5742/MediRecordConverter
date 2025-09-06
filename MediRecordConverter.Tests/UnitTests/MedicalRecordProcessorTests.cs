@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MediRecordConverter;
 using System.Collections.Generic;
@@ -302,8 +303,8 @@ namespace MediRecordConverter.Tests.UnitTests
 
             // Assert
             Assert.AreEqual(1, result.Count);
-            // Environment.NewLineの代わりに\nを期待
-            Assert.AreEqual("頭痛\n発熱", result[0].subject);
+            // Environment.NewLineを使用（WindowsではCRLF）
+            Assert.AreEqual("頭痛" + Environment.NewLine + "発熱", result[0].subject);
             Assert.AreEqual("体温38.5℃", result[0].objectData);
         }
 

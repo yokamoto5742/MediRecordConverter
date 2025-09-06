@@ -56,6 +56,18 @@
     "ask": []
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uvx --from git+https://github.com/oraios/serena serena start-mcp-server --project C:/Users/yokam/source/repos/MediRecordConverter",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "*",

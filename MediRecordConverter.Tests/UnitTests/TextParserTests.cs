@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MediRecordConverter;
 using System.Collections.Generic;
@@ -136,8 +137,8 @@ O > 体温38.5℃
             // Assert
             Assert.AreEqual(1, result.Count);
             var record = result[0];
-            Assert.AreEqual("頭痛の訴え\nめまいも併発している\n嘔気もあり", record.subject);
-            Assert.AreEqual("体温38.5℃\n血圧120/80mmHg\n脈拍80回/分", record.objectData);
+            Assert.AreEqual("頭痛の訴え" + Environment.NewLine + "めまいも併発している" + Environment.NewLine + "嘔気もあり", record.subject);
+            Assert.AreEqual("体温38.5℃" + Environment.NewLine + "血圧120/80mmHg" + Environment.NewLine + "脈拍80回/分", record.objectData);
         }
 
         /// <summary>

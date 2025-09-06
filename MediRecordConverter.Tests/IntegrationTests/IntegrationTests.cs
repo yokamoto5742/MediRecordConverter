@@ -244,7 +244,7 @@ O > 血圧測定結果
 A > 診断結果
 P > 治療計画
 F > コメント
-サ > サマリー";
+ｻ > サマリー";
 
             // Act
             var records = textParser.ParseMedicalText(medicalText);
