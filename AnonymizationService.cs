@@ -209,8 +209,6 @@ namespace MediRecordConverter
                     System.Diagnostics.Debug.WriteLine($"警告: '{word}' は含まれているが正規表現でマッチしません");
                 }
             }
-            
-            System.Diagnostics.Debug.WriteLine($"匿名化完了: 総置換数={totalReplacements}件");
 
             return result;
         }
