@@ -144,13 +144,11 @@ namespace MediRecordConverter
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"矢印文字→が見つかりませんでした: '{cleanLine}'");
-                        
-                        // デバッグ用：文字コードをチェック
-                        for (int i = 0; i < cleanLine.Length; i++)
+                        // 単純な単語形式として処理
+                        if (!string.IsNullOrEmpty(cleanLine))
                         {
-                            char c = cleanLine[i];
-                            System.Diagnostics.Debug.WriteLine($"  文字[{i}]: '{c}' (U+{((int)c).ToString("X4")})");
+                            replacementWords.Add(cleanLine);
+                            System.Diagnostics.Debug.WriteLine($"単語追加成功: '{cleanLine}'");
                         }
                     }
                 }
