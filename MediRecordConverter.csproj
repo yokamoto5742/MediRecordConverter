@@ -69,6 +69,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnonymizationService.cs" />
     <Compile Include="ConfigManager.cs" />
     <Compile Include="DateTimeParser.cs" />
     <Compile Include="DoctorRecordExtractor.cs" />
@@ -121,6 +122,9 @@
   <ItemGroup>
     <Content Include="LICENSE.txt" />
     <Content Include="MediRecordConverter.ico" />
+    <Content Include="replacement_list.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">

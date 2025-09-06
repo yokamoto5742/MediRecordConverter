@@ -20,6 +20,8 @@ namespace MediRecordConverter
         public string OperationFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\mouseoperation.exe";
         public string SoapCopyFilePath { get; private set; } = @"C:\Shinseikai\MediRecordConverter\soapcopy.exe";
         public int FileCleanupIntervalMinutes { get; private set; } = 60;
+        public string AnonymizationSymbol { get; private set; } = "●●";
+        public string ReplacementListPath { get; private set; } = "replacement_list.txt";
 
         public ConfigManager()
         {
@@ -43,6 +45,8 @@ namespace MediRecordConverter
                 OperationFilePath = GetStringSetting("OperationFilePath", @"C:\Shinseikai\TXT2JSON\mouseoperation.exe");
                 SoapCopyFilePath = GetStringSetting("SoapCopyFilePath", @"C:\Shinseikai\TXT2JSON\soapcopy.exe");
                 FileCleanupIntervalMinutes = GetIntSetting("FileCleanupIntervalMinutes", 60);
+                AnonymizationSymbol = GetStringSetting("AnonymizationSymbol", "●●");
+                ReplacementListPath = GetStringSetting("ReplacementListPath", "replacement_list.txt");
 
             }
             catch (Exception ex)

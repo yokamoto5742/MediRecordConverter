@@ -16,6 +16,7 @@ namespace MediRecordConverter
         private System.Windows.Forms.Timer clipboardTimer;
         private ConfigManager config;
         private TextParser textParser;
+        private AnonymizationService anonymizationService;
         private TextBox textInput;
         private TextBox textOutput;
         private Label statsLabel;
@@ -26,11 +27,106 @@ namespace MediRecordConverter
         {
             config = new ConfigManager();
             textParser = new TextParser();
+            anonymizationService = new AnonymizationService(config.AnonymizationSymbol, config.ReplacementListPath);
             InitializeComponent();
             InitializeCustomComponents();
             SetupClipboardMonitoring();
             UpdateStats();
             CleanupOldFiles();
+            InitializeAnonymizationService();
+        }
+
+        private void InitializeAnonymizationService()
+        {
+            System.Diagnostics.Debug.WriteLine($"匿名化サービス初期化開始: パス='{config.ReplacementListPath}'");
+            
+            try
+            {
+                if (!anonymizationService.LoadReplacementList())
+                {
+                    System.Diagnostics.Debug.WriteLine("匿名化リスト読み込み失敗");
+                    var result = MessageBox.Show($"匿名化リストファイルの読み込みに失敗しました。\n" +
+                                   $"パス: {config.ReplacementListPath}\n\n" +
+                                   "匿名化機能は無効になります。\n" +
+                                   "詳細なデバッグ情報を表示しますか？", 
+                                   "匿名化機能エラー", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    
+                    if (result == DialogResult.Yes)
+                    {
+                        ShowAnonymizationDebugInfo();
+                    }
+                }
+                else
+                {
+                    var stats = anonymizationService.GetStatistics();
+                    System.Diagnostics.Debug.WriteLine($"匿名化サービス初期化完了: {stats.LoadedWordsCount}件の単語を読み込み");
+                    
+                    // 成功メッセージを表示
+                    MessageBox.Show($"匿名化機能が正常に初期化されました。\n\n" +
+                                   $"読み込み単語数: {stats.LoadedWordsCount}件\n" +
+                                   $"匿名化記号: {config.AnonymizationSymbol}\n" +
+                                   $"リストファイル: {config.ReplacementListPath}", 
+                                   "匿名化機能初期化完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // テスト用：いくつかのサンプル単語で確認
+                    if (stats.LoadedWordsCount > 0)
+                    {
+                        string testText = "横山先生がさくら病棟で診察";
+                        string anonymizedTest = anonymizationService.AnonymizeJsonString(testText);
+                        System.Diagnostics.Debug.WriteLine($"テスト置換: '{testText}' → '{anonymizedTest}'");
+                        
+                        if (testText != anonymizedTest)
+                        {
+                            MessageBox.Show($"匿名化テスト成功！\n\n" +
+                                           $"元テキスト: {testText}\n" +
+                                           $"匿名化後: {anonymizedTest}", 
+                                           "匿名化テスト結果", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show($"匿名化テスト失敗！\n\n" +
+                                           $"テストテキストが変更されませんでした。\n" +
+                                           $"テキスト: {testText}", 
+                                           "匿名化テスト結果", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"匿名化サービスの初期化中にエラーが発生しました。\n\n" +
+                               $"エラー: {ex.Message}\n" +
+                               $"スタックトレース: {ex.StackTrace}", 
+                               "匿名化機能エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ShowAnonymizationDebugInfo()
+        {
+            try
+            {
+                var currentDir = Directory.GetCurrentDirectory();
+                var appDir = AppDomain.CurrentDomain.BaseDirectory;
+                var executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var executableDir = Path.GetDirectoryName(executablePath);
+                
+                var debugInfo = $"匿名化機能デバッグ情報:\n\n" +
+                               $"設定ファイルのパス: {config.ReplacementListPath}\n" +
+                               $"現在のディレクトリ: {currentDir}\n" +
+                               $"アプリケーションディレクトリ: {appDir}\n" +
+                               $"実行ファイルパス: {executablePath}\n" +
+                               $"実行ファイルディレクトリ: {executableDir}\n\n" +
+                               $"候補ファイルパス:\n" +
+                               $"1. {Path.Combine(executableDir, config.ReplacementListPath)} (存在: {File.Exists(Path.Combine(executableDir, config.ReplacementListPath))})\n" +
+                               $"2. {Path.Combine(currentDir, config.ReplacementListPath)} (存在: {File.Exists(Path.Combine(currentDir, config.ReplacementListPath))})\n" +
+                               $"3. {Path.Combine(appDir, config.ReplacementListPath)} (存在: {File.Exists(Path.Combine(appDir, config.ReplacementListPath))})\n";
+                
+                MessageBox.Show(debugInfo, "匿名化機能デバッグ情報", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"デバッグ情報の取得中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void InitializeCustomComponents()
@@ -389,10 +485,47 @@ namespace MediRecordConverter
 
                 string jsonData = JsonConvert.SerializeObject(parsedData, jsonSettings);
 
-                textOutput.Text = jsonData;
-                Clipboard.SetText(jsonData);
+                // 匿名化処理（必須）
+                string anonymizedJsonData = jsonData;
+                var anonymizationStats = new AnonymizationStatistics();
+                
+                System.Diagnostics.Debug.WriteLine("=== 匿名化処理開始 ===");
+                System.Diagnostics.Debug.WriteLine($"元JSON（最初の200文字）: {jsonData.Substring(0, Math.Min(200, jsonData.Length))}...");
+                System.Diagnostics.Debug.WriteLine($"匿名化サービス状態: IsLoaded={anonymizationService.IsLoaded()}");
+                
+                if (anonymizationService.IsLoaded())
+                {
+                    anonymizationService.ResetStatistics();
+                    anonymizedJsonData = anonymizationService.AnonymizeJsonString(jsonData);
+                    anonymizationStats = anonymizationService.GetStatistics();
+                    
+                    System.Diagnostics.Debug.WriteLine($"匿名化処理完了: {anonymizationStats.TotalReplacements}件の置換を実行");
+                    System.Diagnostics.Debug.WriteLine($"匿名化後JSON（最初の200文字）: {anonymizedJsonData.Substring(0, Math.Min(200, anonymizedJsonData.Length))}...");
+                    
+                    // 変更があったかチェック
+                    if (jsonData != anonymizedJsonData)
+                    {
+                        System.Diagnostics.Debug.WriteLine("JSONに変更が確認されました");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("JSONに変更がありませんでした");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("匿名化サービスが利用できません - 匿名化なしで処理継続");
+                }
 
-                ShowAutoCloseMessage("変換したテキストをコピーしました");
+                textOutput.Text = anonymizedJsonData;
+                Clipboard.SetText(anonymizedJsonData);
+
+                // 統計情報を含むメッセージ表示
+                string message = anonymizationStats.TotalReplacements > 0 
+                    ? $"変換完了: {anonymizationStats.TotalReplacements}件を匿名化してコピーしました"
+                    : "変換したテキストをコピーしました";
+                    
+                ShowAutoCloseMessage(message);
             }
             catch (Exception ex)
             {

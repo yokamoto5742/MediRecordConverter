@@ -7,7 +7,7 @@
 **プラットフォーム**: .NET Framework 4.7.2  
 **言語**: C# (Windows Forms)
 
-## 最新アップデート (2025-09-04)
+## 最新アップデート (2025-09-05)
 
 ### ✅ 完了したマイルストーン
 
@@ -36,6 +36,7 @@
 - 自動SOAP分類（明示的パターン + キーワードベース）
 - リアルタイム統計表示
 - ウィンドウ位置カスタマイズ機能
+- 単一インスタンス実行機能（Mutex使用）
 
 ### 🧪 テストカバレッジ状況
 
@@ -206,6 +207,32 @@ Input Text → DateTimeParser → DoctorRecordExtractor → SOAPClassifier → M
 
 ---
 
-**Last Updated**: 2025-09-04  
+**Last Updated**: 2025-09-05  
 **Current Version**: 1.0 (Production Ready)  
 **Next Milestone**: 2.0 Enhanced Features
+
+## 2025-09-05 追加実装
+
+### 🔐 Single Instance Application Feature
+- **Mutex-based Instance Control**: アプリケーションの単一インスタンス実行機能を実装
+- **Window Management**: 既存ウィンドウの自動フォアグラウンド表示機能
+- **Process Management**: 重複起動時の既存プロセス検出と制御
+- **User32 API Integration**: Win32 APIを使用したウィンドウ操作機能
+
+#### 技術実装詳細
+```csharp
+// Mutex-based single instance control
+private static Mutex mutex = null;
+private const string AppName = "MediRecordConverter";
+
+// Win32 API integration for window management
+[DllImport("user32.dll")]
+static extern bool SetForegroundWindow(IntPtr hWnd);
+[DllImport("user32.dll")]
+static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+```
+
+#### 機能効果
+- ✅ 複数起動の防止による リソース使用量削減
+- ✅ ユーザーエクスペリエンス向上（既存ウィンドウへの自動切り替え）
+- ✅ システム安定性の向上（プロセス重複によるコンフリクト回避）
