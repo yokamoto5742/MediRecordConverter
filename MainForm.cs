@@ -482,8 +482,22 @@ namespace MediRecordConverter
                     return;
                 }
 
-                Clipboard.SetText(text);
-                ShowAutoCloseMessage("変換前のカルテ記載をコピーしました");
+                // 匿名化処理（必須）
+                string anonymizedText = text;
+                var anonymizationStats = new AnonymizationStatistics();
+                
+                if (anonymizationService.IsLoaded())
+                {
+                    anonymizationService.ResetStatistics();
+                    anonymizedText = anonymizationService.AnonymizeJsonString(text);
+                    anonymizationStats = anonymizationService.GetStatistics();
+                }
+
+                Clipboard.SetText(anonymizedText);
+
+                string message =  "変換前のカルテ記載をコピーしました";
+
+                ShowAutoCloseMessage(message);
             }
             catch (Exception ex)
             {
