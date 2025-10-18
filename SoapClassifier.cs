@@ -75,7 +75,12 @@ namespace MediRecordConverter
                 }
             }
 
-            if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) && !IsHeaderLine(trimmedLine))
+            // SOAPセクション内の日付行（手術日など）をcontinuation lineとして扱う
+            bool isDateInSoapSection = !string.IsNullOrEmpty(record.currentSoapSection) &&
+                                       Regex.IsMatch(trimmedLine, @"^\d{4}/\d{1,2}/\d{1,2}");
+
+            if (!foundSoapPattern && !string.IsNullOrWhiteSpace(trimmedLine) &&
+                (isDateInSoapSection || !IsHeaderLine(trimmedLine)))
             {
                 AddContinuationLine(record, trimmedLine);
             }
