@@ -3,15 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## House Rules:
-- 文章ではなくパッチの差分を返すこと。Return patch diffs, not prose.
-- 不明な点がある場合は、トレードオフを明記した2つの選択肢を提案すること（80語以内）。
-- 変更範囲は最小限に抑えること：範囲拡大の指示がない限り最大3ファイルまで。
-- 3ファイルを超える場合は、理由と対象ファイルを明記すること。
-- Pythonコードのimport文は以下の適切な順序に並べ替えてください。
-標準ライブラリ
-サードパーティライブラリ
-カスタムモジュール 
-それぞれアルファベット順に並べます。importが先でfromは後です。
+- 文章ではなくパッチの差分を返す。
+- 変更範囲は最小限に抑える。
+- コードの修正は直接適用する。
 
 ## Automatic Notifications (Hooks)
 自動通知は`.claude/settings.local.json` で設定済：
