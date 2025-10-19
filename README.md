@@ -334,15 +334,7 @@ System.Diagnostics.Debug.WriteLine($"ParseMedicalText: {lines.Length}行のテ�
 
 ## ライセンス
 
-このプロジェクトは [MIT License](LICENSE.txt) の下で公開されています。
-
-```
-MIT License
-
-Copyright (c) 2025 yasuhiro okamoto
-
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-```
+このプロジェクトのライセンス情報については、LICENSEファイルを参照してください。
 
 ## 重要な注意事項
 
